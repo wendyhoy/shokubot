@@ -16,7 +16,7 @@ module.exports = {
   development: {
     ...sharedConfig,
     connection: {
-      databae: 'shokubot_dev'
+      database: 'shokubot_dev'
     }
   },
 

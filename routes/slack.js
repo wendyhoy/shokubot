@@ -1,8 +1,11 @@
-var express = require('express');
-var router = express.Router();
-
-// require modules for slackbot
+const express = require('express');
 const request = require('request');
+const bodyParser = require('body-parser');
+const knex = require('../db');
+const constants = require('../constants.js')
+
+const router = express.Router();
+const urlEncodedParser = bodyParser.urlencoded({ extended: false });
 
 // helper function to send messages to Slack response_url
 function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
@@ -17,7 +20,7 @@ function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
 
   request(postOptions, (error, response, body) => {
     if (error) {
-      // handle errors
+      // TODO: handle error
     }
   });
 }
@@ -28,7 +31,7 @@ function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
 router.get('/auth', (req, res) => {
 
   // retrieve Slack verification code from req.query.code
-  // send response with verification code, client ID, and client secret
+  // send request back with verification code, client ID, and client secret
   // via https://slack.com/api/oauth.access
   const options = {
     uri:
@@ -39,27 +42,40 @@ router.get('/auth', (req, res) => {
     method: 'GET'
   };
 
+  // send request back and wait for JSON response from Slack
   request(options, (error, response, body) => {
     const JSONresponse = JSON.parse(body);
     if (!JSONresponse.ok) {
 
-      // respond with error message
+      // TODO: handle error
       res.send('Authentication Error');
-
-      // NEED TO HANDLE ERROR
     }
     else {
 
-      // respond with success message (redirect to slack?)
+      // TODO: add to slack was successful (redirect to thank you page?)
       res.send('Add to Slack successful.')
 
-      // NEED TO SAVE RESPONSE to DB
+      // save slack team to database
+      knex.insert({
+        slack_team_name: JSONresponse.team_name,
+        slack_team_id: JSONresponse.team_id,
+        slack_bot_user_id: JSONresponse.bot.bot_user_id,
+        slack_bot_access_token: JSONresponse.bot.bot_access_token
+      })
+      .into('teams')
+      .catch(error => {
+        // TODO: handle error
+        console.error(error);
+      })
+      .then(() => {
+        console.log('Slack team added successfully.');
+      });
     }
   });
 
 });
 
-// Handle slash commands
+// Handle slash command
 // VERB: POST
 // PATH: /slack/commands/shokubot
 router.post('/commands/shokubot', (req, res) => {
@@ -80,38 +96,100 @@ router.post('/commands/shokubot', (req, res) => {
 
     // set up response message
     let message = {
-      'response_type': 'ephemeral'
+      response_type: 'ephemeral'
     };
 
-    // handle command argument
+    // process command argument
     const arg = reqBody.text.trim();
 
     switch (arg) {
+      case 'now':
+        message.attachments = [
+          {
+            ...constants.autonomy
+          }
+        ];
+        break;
       case 'set':
-        message['text'] = 'Set your reminders.';
+        message.text = 'Set your reminders.';
         break;
       case 'pause':
-        message['text'] = 'Pause your reminders.';
+        message.text = 'Pause your reminders.';
         break;
       case 'resume':
-        message['text'] = 'Resume your reminders.';
+        message.text = 'Resume your reminders.';
         break;
       case 'stop':
-        message['text'] = 'Stop your reminders.';
+        message.text = 'Stop your reminders.';
         break;
       default:
-        message['attachments'] = [
+        message.attachments = [
           {
-            'fallback': 'Need help with /shokubot? Use \'shokubot set\' to set your reminders. Then use \'shokubot pause\', \'shokubot resume\' and \'shokubot stop\' to pause, resume, and stop your reminders.',
-            'pretext': ':wave: Need help with `/shokubot`?',
-            'text': '• `/shokubot set` sets your reminders.\n• `/shokubot pause` pauses your reminders.\n• `/shokubot resume` resumes your reminders.\n• `/shokubot stop` stops your reminders.'
+            ...constants.help
           }
-        ]
+        ];
     }
 
     sendMessageToSlackResponseURL(responseURL, message);
   }
 
 });
+
+// Handles button clicks from interactive messages
+// VERB: POST
+// PATH: /slack/actions
+router.post('/actions', urlEncodedParser, (req, res) => {
+  // respond with ok status
+  res.status(200).end();
+
+  // set up message
+  let message = {
+    replace_original: true
+  };
+
+  // parse payload
+  const actionJSONPayload = JSON.parse(req.body.payload);
+
+  // check callback_id
+  const callback_id = actionJSONPayload.callback_id;
+
+  // send next message
+  switch (callback_id) {
+    case constants.autonomy.callback_id:
+      message.attachments = [
+        {
+          ...constants.complexity
+        }
+      ];
+      break;
+    case constants.complexity.callback_id:
+      message.attachments = [
+        {
+          ...constants.reward
+        }
+      ];
+      break;
+    case constants.reward.callback_id:
+      message.attachments = [
+        {
+          ...constants.done
+        }
+      ];
+      break;
+    default:
+      break;
+  }
+
+  // respond with message
+  // const message = {
+  //   'text': actionJSONPayload.user.name
+  //     +' clicked: '
+  //     +actionJSONPayload.actions[0].name,
+  //   'replace_original': false
+  // };
+
+  sendMessageToSlackResponseURL(actionJSONPayload.response_url, message);
+});
+
 
 module.exports = router;
