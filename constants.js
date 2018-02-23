@@ -8,13 +8,13 @@ module.exports = {
     actions: [
       {
         name: 'yes',
-        text: 'yes',
+        text: 'Yes',
         type: 'button',
         value: 'yes'
       },
       {
         name: 'no',
-        text: 'no',
+        text: 'No',
         type: 'button',
         value: 'no'
       }
@@ -29,13 +29,13 @@ module.exports = {
     actions: [
       {
         name: 'yes',
-        text: 'yes',
+        text: 'Yes',
         type: 'button',
         value: 'yes'
       },
       {
         name: 'no',
-        text: 'no',
+        text: 'No',
         type: 'button',
         value: 'no'
       }
@@ -50,13 +50,13 @@ module.exports = {
     actions: [
       {
         name: 'yes',
-        text: 'yes',
+        text: 'Yes',
         type: 'button',
         value: 'yes'
       },
       {
         name: 'no',
-        text: 'no',
+        text: 'No',
         type: 'button',
         value: 'no'
       }

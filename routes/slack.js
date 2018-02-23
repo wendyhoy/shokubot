@@ -21,6 +21,7 @@ function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
   request(postOptions, (error, response, body) => {
     if (error) {
       // TODO: handle error
+      console.error(error);
     }
   });
 }
@@ -56,19 +57,18 @@ router.get('/auth', (req, res) => {
       res.send('Add to Slack successful.')
 
       // save slack team to database
-      knex.insert({
+      knex('teams').insert({
         slack_team_name: JSONresponse.team_name,
         slack_team_id: JSONresponse.team_id,
         slack_bot_user_id: JSONresponse.bot.bot_user_id,
         slack_bot_access_token: JSONresponse.bot.bot_access_token
       })
-      .into('teams')
       .catch(error => {
         // TODO: handle error
         console.error(error);
       })
       .then(() => {
-        console.log('Slack team added successfully.');
+        console.log('Adding slack team to database...');
       });
     }
   });
@@ -93,6 +93,41 @@ router.post('/commands/shokubot', (req, res) => {
     res.status(403).end('Access Forbidden');
   }
   else {
+
+    // find the slack team in the database
+    knex.select('id')
+      .from('teams')
+      .where('slack_team_id', reqBody.team_id)
+      .then(teams => {
+        return teams[0].id;
+      })
+      .then(teamId => {
+
+        // find the slack user in the database
+        knex.select()
+          .from('users')
+          .where('slack_user_id', reqBody.user_id)
+          .then(users => {
+
+            // if not found, add user to database
+            if (users.length === 0) {
+
+              knex('users').insert({
+                slack_user_id: reqBody.user_id,
+                slack_user_name: reqBody.user_name,
+                team_id: teamId
+              })
+              .then(() => {
+                console.log('Adding slack user to database...');
+              });
+            }
+
+          });
+      })
+      .catch(error => {
+        // TODO: handle error
+        console.error(error);
+      });
 
     // set up response message
     let message = {
@@ -149,46 +184,117 @@ router.post('/actions', urlEncodedParser, (req, res) => {
 
   // parse payload
   const actionJSONPayload = JSON.parse(req.body.payload);
+  const slack_user_id = actionJSONPayload.user.id;
 
-  // check callback_id
-  const callback_id = actionJSONPayload.callback_id;
+  // find the slack user in the database
+  knex.select('id')
+    .from('users')
+    .where('slack_user_id', slack_user_id)
+    .then(users => {
+      return users[0].id;
+    })
+    .then(userId => {
 
-  // send next message
-  switch (callback_id) {
-    case constants.autonomy.callback_id:
-      message.attachments = [
-        {
-          ...constants.complexity
-        }
-      ];
-      break;
-    case constants.complexity.callback_id:
-      message.attachments = [
-        {
-          ...constants.reward
-        }
-      ];
-      break;
-    case constants.reward.callback_id:
-      message.attachments = [
-        {
-          ...constants.done
-        }
-      ];
-      break;
-    default:
-      break;
-  }
+      const callback_id = actionJSONPayload.callback_id;
+      const answer = actionJSONPayload.actions[0].value === 'yes' ? true : false;
 
-  // respond with message
-  // const message = {
-  //   'text': actionJSONPayload.user.name
-  //     +' clicked: '
-  //     +actionJSONPayload.actions[0].name,
-  //   'replace_original': false
-  // };
+      // save response and send next message
+      switch (callback_id) {
 
-  sendMessageToSlackResponseURL(actionJSONPayload.response_url, message);
+        case constants.autonomy.callback_id:
+          knex('answers').insert({
+            user_id: userId,
+            autonomy: answer
+          })
+          .catch(error => {
+            // TODO: handle error
+            console.error(error);
+          })
+          .then(() => {
+            console.log('Adding autonomy answer to the database...');
+          });
+
+          message.attachments = [
+            {
+              ...constants.complexity
+            }
+          ];
+          break;
+
+        case constants.complexity.callback_id:
+
+          knex.select()
+            .from('answers')
+            .where('user_id', userId)
+            .orderBy('updated_at', 'desc')
+            .limit(1)
+            .then(answers => {
+              return answers[0].id;
+            })
+            .then(answerId => {
+              knex('answers')
+              .where('id', answerId)
+              .update({
+                complexity: answer
+              })
+              .then(() => {
+                console.log('Adding complexity answer to the database...');
+              });
+            })
+            .catch(error => {
+              // TODO: handle error
+              console.error(error);
+            });
+
+          message.attachments = [
+            {
+              ...constants.reward
+            }
+          ];
+          break;
+
+        case constants.reward.callback_id:
+          knex.select()
+          .from('answers')
+          .where('user_id', userId)
+          .orderBy('updated_at', 'desc')
+          .limit(1)
+          .then(answers => {
+            return answers[0].id;
+          })
+          .then(answerId => {
+            knex('answers')
+            .where('id', answerId)
+            .update({
+              reward: answer
+            })
+            .then(() => {
+              console.log('Adding reward answer to the database...');
+            });
+          })
+          .catch(error => {
+            // TODO: handle error
+            console.error(error);
+          });
+
+          message.attachments = [
+            {
+              ...constants.done
+            }
+          ];
+          break;
+
+        default:
+          message.text = 'Sorry, something went wrong.';
+          break;
+      }
+
+      sendMessageToSlackResponseURL(actionJSONPayload.response_url, message);
+    })
+    .catch(error => {
+      // TODO: handle error
+      console.error(error);
+    });
 });
 
 

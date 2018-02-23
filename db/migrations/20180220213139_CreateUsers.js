@@ -4,10 +4,10 @@ exports.up = function(knex, Promise) {
     table.increments();
     table.string('slack_user_id').unique();
     table.string('slack_user_name');
-    table.integer('slack_team_id').unsigned();
+    table.integer('team_id').unsigned();
     table.timestamps(false, true);
 
-    table.foreign('slack_team_id').references('id').inTable('teams');
+    table.foreign('team_id').references('id').inTable('teams');
   });
 };
 
