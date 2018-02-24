@@ -63,12 +63,12 @@ router.get('/auth', (req, res) => {
         slack_bot_user_id: JSONresponse.bot.bot_user_id,
         slack_bot_access_token: JSONresponse.bot.bot_access_token
       })
+      .then(() => {
+        console.log('Slack team added to the database.');
+      })
       .catch(error => {
         // TODO: handle error
         console.error(error);
-      })
-      .then(() => {
-        console.log('Adding slack team to database...');
       });
     }
   });
@@ -99,30 +99,15 @@ router.post('/commands/shokubot', (req, res) => {
       .from('teams')
       .where('slack_team_id', reqBody.team_id)
       .then(teams => {
-        return teams[0].id;
+        // add user to database
+        return knex('users').insert({
+          slack_user_id: reqBody.user_id,
+          slack_user_name: reqBody.user_name,
+          team_id: teams[0].id
+        });
       })
-      .then(teamId => {
-
-        // find the slack user in the database
-        knex.select()
-          .from('users')
-          .where('slack_user_id', reqBody.user_id)
-          .then(users => {
-
-            // if not found, add user to database
-            if (users.length === 0) {
-
-              knex('users').insert({
-                slack_user_id: reqBody.user_id,
-                slack_user_name: reqBody.user_name,
-                team_id: teamId
-              })
-              .then(() => {
-                console.log('Adding slack user to database...');
-              });
-            }
-
-          });
+      .then(() => {
+        console.log('Slack user added to the database.');
       })
       .catch(error => {
         // TODO: handle error
@@ -191,27 +176,25 @@ router.post('/actions', urlEncodedParser, (req, res) => {
     .from('users')
     .where('slack_user_id', slack_user_id)
     .then(users => {
-      return users[0].id;
-    })
-    .then(userId => {
 
-      const callback_id = actionJSONPayload.callback_id;
+      const userId = users[0].id;
+      const callbackId = actionJSONPayload.callback_id;
       const answer = actionJSONPayload.actions[0].value === 'yes' ? true : false;
 
       // save response and send next message
-      switch (callback_id) {
+      switch (callbackId) {
 
         case constants.autonomy.callback_id:
           knex('answers').insert({
             user_id: userId,
             autonomy: answer
           })
+          .then(() => {
+            console.log('Autonomy answer saved to the database.');
+          })
           .catch(error => {
             // TODO: handle error
             console.error(error);
-          })
-          .then(() => {
-            console.log('Adding autonomy answer to the database...');
           });
 
           message.attachments = [
@@ -229,17 +212,14 @@ router.post('/actions', urlEncodedParser, (req, res) => {
             .orderBy('updated_at', 'desc')
             .limit(1)
             .then(answers => {
-              return answers[0].id;
-            })
-            .then(answerId => {
-              knex('answers')
-              .where('id', answerId)
+              return knex('answers')
+              .where('id', answers[0].id)
               .update({
                 complexity: answer
-              })
-              .then(() => {
-                console.log('Adding complexity answer to the database...');
               });
+            })
+            .then(() => {
+              console.log('Complexity answer saved to the database.');
             })
             .catch(error => {
               // TODO: handle error
@@ -255,33 +235,30 @@ router.post('/actions', urlEncodedParser, (req, res) => {
 
         case constants.reward.callback_id:
           knex.select()
-          .from('answers')
-          .where('user_id', userId)
-          .orderBy('updated_at', 'desc')
-          .limit(1)
-          .then(answers => {
-            return answers[0].id;
-          })
-          .then(answerId => {
-            knex('answers')
-            .where('id', answerId)
-            .update({
-              reward: answer
+            .from('answers')
+            .where('user_id', userId)
+            .orderBy('updated_at', 'desc')
+            .limit(1)
+            .then(answers => {
+              return knex('answers')
+              .where('id', answers[0].id)
+              .update({
+                reward: answer
+              });
             })
             .then(() => {
-              console.log('Adding reward answer to the database...');
+              console.log('Reward answer saved to the database.');
+            })
+            .catch(error => {
+              // TODO: handle error
+              console.error(error);
             });
-          })
-          .catch(error => {
-            // TODO: handle error
-            console.error(error);
-          });
 
-          message.attachments = [
-            {
-              ...constants.done
-            }
-          ];
+            message.attachments = [
+              {
+                ...constants.done
+              }
+            ];
           break;
 
         default:
