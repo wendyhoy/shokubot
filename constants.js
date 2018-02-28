@@ -69,14 +69,20 @@ module.exports = {
     color: '#F2E461'
   },
 
-  help: {
+  remind: {
+    pretext: ':wave: Need help with `/shokubot remind`?',
 
+    text: 'Use `/shokubot remind` to tell shokubot when to send your three questions. Examples include:\n• `/shokubot remind me every weekday at 5pm`\n• `/shokubot remind me Monday to Thursday at 4:30pm`\n• `/shokubot remind me Monday, Wednesday, and Friday at 9am`\n',
+
+    fallback: 'Need help with \'/shokubot remind\'? Use \'/shokubot remind\' to tell shokbut when to send your three questions. Examples include:\n• \'/shokubot remind me every weekday at 5pm\'\n• \'/shokubot remind me Monday to Thursday at 4:30pm\'\n• \'/shokubot remind me Monday, Wednesday, and Friday at 9am\'\n',
+  },
+
+  help: {
     pretext: ':wave: Need help with `/shokubot`?',
 
-    text: 'Use `/shokubot now` to answer your three questions for today. Or use the commands below to manage your reminders:\n• `/shokubot set`\n• `/shokubot pause`\n• `/shokubot resume`\n• `/shokubot stop`',
+    text: 'Use `/shokubot now` to answer your three questions for today. Or use the commands below to manage your reminders:\n• `/shokubot remind`\n• `/shokubot pause`\n• `/shokubot resume`\n• `/shokubot stop`',
 
-    fallback: 'Need help with /shokubot? Use \'shokubot now\' to answer your three questions for today. Or use \'shokubot set\', \'shokubot pause\', \'shokubot resume\' and \'shokubot stop\' to manage your reminders.'
-
+    fallback: 'Need help with \'/shokubot\'? Use \'shokubot now\' to answer your three questions for today. Or use \'shokubot remind\', \'shokubot pause\', \'shokubot resume\' and \'shokubot stop\' to manage your reminders.'
   }
 
 };

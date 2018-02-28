@@ -5,6 +5,7 @@ exports.up = function(knex, Promise) {
     table.string('slack_user_id').unique();
     table.string('slack_user_name');
     table.integer('team_id').unsigned();
+    table.json('reminders');
     table.timestamps(false, true);
 
     table.foreign('team_id').references('id').inTable('teams');

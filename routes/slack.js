@@ -7,9 +7,112 @@ const constants = require('../constants.js')
 const router = express.Router();
 const urlEncodedParser = bodyParser.urlencoded({ extended: false });
 
+// helper function to set reminders for each user
+function setReminder(slackUserId, dayAndTime) {
+
+  // make sure we find a time
+  const time = dayAndTime.match(/([1-9]|10|11|12)(:[0-5][0-9])?(am|pm)/i);
+  console.log('setReminder: time ', time);
+
+  if (!time) {
+    return false;
+  }
+
+  // check days
+  const everyday = dayAndTime.match(/every\s*day/i);
+  const weekday = dayAndTime.match(/week\s*day/i);
+
+  const range = dayAndTime.match(/(sun|mon|tues|wednes|thurs|fri|satur)day\s+to\s+(sun|mon|tues|wednes|thurs|fri|satur)day/i);
+
+  const list = dayAndTime.match(/(sun|mon|tues|wednes|thurs|fri|satur)days?((,|,\s+and|\s+and)\s+(sun|mon|tues|wednes|thurs|fri|satur)days?)*/i);
+
+  console.log('setReminder: everyday ', everyday);
+  console.log('setReminder: weekday ', weekday);
+  console.log('setReminder: range ', range);
+  console.log('setReminder: list ', list);
+
+  if (!everyday && !weekday && !range && !list) {
+    return false;
+  }
+
+  // get hours and minutes
+  let hours = parseInt(time[1]);
+  const minutes = time[2] !== undefined ? parseInt(time[2].slice(1)) : 0;
+  if (time[3] == 'pm') {
+    hours += 12;
+  }
+
+  console.log('setReminder: hours ', hours);
+  console.log('setReminder: minutes ', minutes);
+
+  // get list of days
+  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  let days = Array.from({ length: 7 });
+  days.fill(false);
+
+  // helper map
+  const dayToIndex = {
+    sun: 0,
+    mon: 1,
+    tues: 2,
+    wednes: 3,
+    thurs: 4,
+    fri: 5,
+    satur: 6
+  };
+
+  if (everyday) {
+    days.fill(true);
+  }
+  else if (weekday) {
+    days.fill(true, 1, 6);
+  }
+  else if (range) {
+    const start = dayToIndex[range[1]];
+    const end = dayToIndex[range[2]] + 1;
+    days.fill(true, start, end);
+  }
+  else if (list) {
+    const listStr = list[0];
+    const listArr = listStr.match(/(sun|mon|tues|wednes|thurs|fri|satur)/gi);
+    listArr.forEach(day => {
+      const index = dayToIndex[day];
+      days[index] = true;
+    });
+  }
+
+  // save results to database
+  const reminders = {
+    days: days,
+    hours: hours,
+    minutes: minutes
+  };
+
+  console.log('setReminder: reminders ', reminders);
+
+  knex('users')
+    .where('slack_user_id', slackUserId)
+    .update({
+      reminders: JSON.stringify(reminders)
+    })
+    .then(() => {
+      console.log('Reminders saved to the database.');
+    })
+    .catch(error => {
+      // TODO: handle error
+      console.log(error);
+    });
+
+  // set timer for next reminder
+  // TODO: get timezone / daylight savings
+
+
+  return true;
+}
+
 // helper function to send messages to Slack response_url
 function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
-  const postOptions = {
+  const options = {
     uri: responseURL,
     method: 'post',
     headers: {
@@ -18,7 +121,7 @@ function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
     json: JSONmessage
   };
 
-  request(postOptions, (error, response, body) => {
+  request(options, (error, response, body) => {
     if (error) {
       // TODO: handle error
       console.error(error);
@@ -40,7 +143,7 @@ router.get('/auth', (req, res) => {
       +req.query.code
       +'&client_id='+process.env.SLACK_CLIENT_ID
       +'&client_secret='+process.env.SLACK_CLIENT_SECRET,
-    method: 'GET'
+    method: 'get'
   };
 
   // send request back and wait for JSON response from Slack
@@ -83,9 +186,8 @@ router.post('/commands/shokubot', (req, res) => {
   // respond with status 200
   res.status(200).end();
 
-  // get request body and response_url
+  // get request body
   const reqBody = req.body;
-  const responseURL = reqBody.response_url;
 
   // verify token
   if (reqBody.token != process.env.SLACK_VERIFICATION_TOKEN) {
@@ -94,14 +196,17 @@ router.post('/commands/shokubot', (req, res) => {
   }
   else {
 
+    // Get slack user id
+    const slackUserId = reqBody.user_id;
+
     // find the slack team in the database
     knex.select('id')
       .from('teams')
       .where('slack_team_id', reqBody.team_id)
       .then(teams => {
-        // add user to database
+        // add user to the database
         return knex('users').insert({
-          slack_user_id: reqBody.user_id,
+          slack_user_id: slackUserId,
           slack_user_name: reqBody.user_name,
           team_id: teams[0].id
         });
@@ -119,10 +224,18 @@ router.post('/commands/shokubot', (req, res) => {
       response_type: 'ephemeral'
     };
 
-    // process command argument
-    const arg = reqBody.text.trim();
+    // process command arguments
+    const args = reqBody.text.trim();
+    let firstArg = args;
+    let remainingArgs = '';
 
-    switch (arg) {
+    const spaceIndex = args.indexOf(' ');
+    if (spaceIndex !== -1) {
+      firstArg = args.slice(0, spaceIndex);
+      remainingArgs = args.slice(spaceIndex).trim();
+    }
+
+    switch (firstArg) {
       case 'now':
         message.attachments = [
           {
@@ -130,8 +243,17 @@ router.post('/commands/shokubot', (req, res) => {
           }
         ];
         break;
-      case 'set':
-        message.text = 'Set your reminders.';
+      case 'remind':
+        if (setReminder(slackUserId, remainingArgs)) {
+          message.text = `:thumbsup: I've set your reminders. Your next reminder is...`;
+        }
+        else {
+          message.attachments = [
+            {
+              ...constants.remind
+            }
+          ];
+        }
         break;
       case 'pause':
         message.text = 'Pause your reminders.';
@@ -150,7 +272,7 @@ router.post('/commands/shokubot', (req, res) => {
         ];
     }
 
-    sendMessageToSlackResponseURL(responseURL, message);
+    sendMessageToSlackResponseURL(reqBody.response_url, message);
   }
 
 });

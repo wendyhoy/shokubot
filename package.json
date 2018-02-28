@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "nodemon ./bin/www",
+    "ngrok": "ngrok http 4390",
     "db:create": "createdb -e shokubot_dev",
     "db:drop": "dropdb -e --if-exists shokubot_dev"
   },
