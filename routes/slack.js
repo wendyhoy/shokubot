@@ -38,12 +38,19 @@ function setReminder(slackUserId, dayAndTime) {
   // get hours and minutes
   let hours = parseInt(time[1]);
   const minutes = time[2] !== undefined ? parseInt(time[2].slice(1)) : 0;
-  if (time[3] == 'pm') {
+  if (time[3] === 'am' && hours === 12) {
+    hours = 0;
+  }
+  else if (time[3] === 'pm' && hours < 12) {
     hours += 12;
   }
 
+  // convert to seconds
+  let seconds = (hours * 60 + minutes) * 60;
+
   console.log('setReminder: hours ', hours);
   console.log('setReminder: minutes ', minutes);
+  console.log('setReminder: seconds ', seconds);
 
   // get list of days
   // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
@@ -81,31 +88,181 @@ function setReminder(slackUserId, dayAndTime) {
     });
   }
 
-  // save results to database
-  const reminders = {
+  // store reminders in an object
+  let reminders = {
     days: days,
-    hours: hours,
-    minutes: minutes
+    seconds: seconds
   };
 
   console.log('setReminder: reminders ', reminders);
 
-  knex('users')
+
+  // get the users slack bot access token to request user's timezone offset
+  knex.select('slack_bot_access_token')
+    .from('teams')
+    .innerJoin('users', 'teams.id', 'users.team_id')
     .where('slack_user_id', slackUserId)
-    .update({
-      reminders: JSON.stringify(reminders)
-    })
-    .then(() => {
-      console.log('Reminders saved to the database.');
+    .then(tokens => {
+
+      const options = {
+        uri:
+          'https://slack.com/api/users.info?token='
+          +tokens[0].slack_bot_access_token
+          +'&user='+slackUserId,
+        method: 'get'
+      };
+
+      // request the user's timezone offset
+      request(options, (error, response, body) => {
+
+        const JSONresponse = JSON.parse(body);
+        if (!JSONresponse.ok) {
+
+          // TODO: handle error
+          console.error(JSONresponse.error);
+        }
+        else {
+
+          // conversion from user time to our time
+          // getTimezoneOffset returns minutes; +ive if behind, -ive if ahead
+          // tz_offset is in seconds; -ive if behind, +ive if ahead
+          // save conversion in seconds
+          const serverTime = new Date();
+          const serverTimezoneOffset = serverTime.getTimezoneOffset() * 60;
+          const conversion = (-serverTimezoneOffset - JSONresponse.user.tz_offset);
+
+          // convert all reminders
+          reminders.seconds += conversion;
+
+          // if seconds is greater than one day, i.e., rollover
+          const secondsPerDay = 24 * 60 * 60;
+          if (reminders.seconds > secondsPerDay) {
+            reminders.seconds -= secondsPerDay;
+            const saturday = reminders.days.pop();
+            reminders.days.unshift(saturday);
+          }
+          else if (reminders.seconds < 0) {
+            eminders.seconds += secondsPerDay;
+            const sunday = reminder.days.shift();
+            reminders.days.push(sunday);
+          }
+
+          // save all reminder times in server time
+          knex('users')
+            .where('slack_user_id', slackUserId)
+            .update({
+              reminders: JSON.stringify(reminders)
+            })
+            .then(() => {
+              console.log('Reminders saved to the database.');
+            })
+            .catch(error => {
+              // TODO: handle error
+              console.error(error);
+            });
+
+          // calculate milliseconds to next reminder
+          let today = new Date();
+          let dayIndex = today.getDay();
+          let daysToGo = 0;
+
+          const todayInSeconds = (today.getHours() * 60 + today.getMinutes()) * 60;
+          if (todayInSeconds > reminders.seconds) {
+            daysToGo++;
+            dayIndex++;
+            if (dayIndex > 6) {
+              dayIndex = 0;
+            }
+          }
+
+          while (!reminders.days[dayIndex]) {
+            daysToGo++;
+            dayIndex++;
+            if (dayIndex > 6) {
+              dayIndex = 0;
+            }
+          }
+
+          // set the timer
+          const millisecondsToGo = (daysToGo * 24 * 60 * 60 + reminders.seconds - todayInSeconds) * 1000;
+          console.log('setReminder: millisecondsToGo', millisecondsToGo);
+          setTimeout((slackUserId, slackBotAccessToken) => {
+
+              console.log('setReminder: sending postMessage request');
+
+              // get the DM channel for this user
+              const options = {
+                uri:
+                  'https://slack.com/api/im.list?token='
+                  +slackBotAccessToken,
+                method: 'get'
+              };
+
+              request(options, (error, response, body) => {
+
+                const JSONresponse = JSON.parse(body);
+                if (!JSONresponse.ok) {
+
+                  // TODO: handle error
+                  console.error(JSONresponse.error);
+                }
+                else {
+
+                  console.log('Received im.list response.');
+
+
+                  for (let i=0; i<JSONresponse.ims.length; i++) {
+                    if (JSONresponse.ims[i].user === slackUserId) {
+
+                      // trigger question sequence when timer expires
+                      const options = {
+                        uri: 'https://slack.com/api/chat.postMessage',
+                        method: 'post',
+                        headers: {
+                          'Content-type': 'application/json',
+                          'Authorization': 'Bearer '+slackBotAccessToken
+                        },
+                        json: {
+                          channel: JSONresponse.ims[i].id,
+                          attachments: [
+                            {
+                              ...constants.autonomy
+                            }
+                          ],
+                          text: 'Here are your questions for today!'
+                        }
+                      };
+
+                      request(options, (error, response, body) => {
+                        console.log('Received response from postMessage.');
+                        if (error) {
+                          // TODO: handle error
+                          console.error(error);
+                        }
+                      });
+
+
+                      break;
+                    }
+                  }
+                }
+              });
+
+            },
+            millisecondsToGo,
+            slackUserId,
+            tokens[0].slack_bot_access_token
+          );
+
+        }
+
+      });
+
     })
     .catch(error => {
       // TODO: handle error
       console.log(error);
     });
-
-  // set timer for next reminder
-  // TODO: get timezone / daylight savings
-
 
   return true;
 }
@@ -116,7 +273,7 @@ function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
     uri: responseURL,
     method: 'post',
     headers: {
-      'Content-type': 'application/json',
+      'Content-type': 'application/json'
     },
     json: JSONmessage
   };
