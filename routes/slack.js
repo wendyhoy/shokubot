@@ -4,6 +4,12 @@ const bodyParser = require('body-parser');
 const knex = require('../db');
 const constants = require('../constants.js')
 
+// TODO: add slack controller actions
+// const { create } = require('../controllers/slack');
+
+const teamController = require('../controllers/team_controller');
+
+
 const router = express.Router();
 const urlEncodedParser = bodyParser.urlencoded({ extended: false });
 
@@ -288,52 +294,8 @@ function sendMessageToSlackResponseURL(responseURL, JSONmessage) {
 
 // Handle add to slack request
 // VERB: GET
-// PATH: /slack/auth
-router.get('/auth', (req, res) => {
-
-  // retrieve Slack verification code from req.query.code
-  // send request back with verification code, client ID, and client secret
-  // via https://slack.com/api/oauth.access
-  const options = {
-    uri:
-      'https://slack.com/api/oauth.access?code='
-      +req.query.code
-      +'&client_id='+process.env.SLACK_CLIENT_ID
-      +'&client_secret='+process.env.SLACK_CLIENT_SECRET,
-    method: 'get'
-  };
-
-  // send request back and wait for JSON response from Slack
-  request(options, (error, response, body) => {
-    const JSONresponse = JSON.parse(body);
-    if (!JSONresponse.ok) {
-
-      // TODO: handle error
-      res.send('Authentication Error');
-    }
-    else {
-
-      // TODO: add to slack was successful (redirect to thank you page?)
-      res.send('Add to Slack successful.')
-
-      // save slack team to database
-      knex('teams').insert({
-        slack_team_name: JSONresponse.team_name,
-        slack_team_id: JSONresponse.team_id,
-        slack_bot_user_id: JSONresponse.bot.bot_user_id,
-        slack_bot_access_token: JSONresponse.bot.bot_access_token
-      })
-      .then(() => {
-        console.log('Slack team added to the database.');
-      })
-      .catch(error => {
-        // TODO: handle error
-        console.error(error);
-      });
-    }
-  });
-
-});
+// PATH: /slack/team/create
+router.get('/team/create', teamController.create);
 
 // Handle slash command
 // VERB: POST
@@ -437,6 +399,7 @@ router.post('/commands/shokubot', (req, res) => {
 // Handles button clicks from interactive messages
 // VERB: POST
 // PATH: /slack/actions
+// TODO: make callback async, i.e., async (req, res) => ...
 router.post('/actions', urlEncodedParser, (req, res) => {
   // respond with ok status
   res.status(200).end();
@@ -451,6 +414,8 @@ router.post('/actions', urlEncodedParser, (req, res) => {
   const slack_user_id = actionJSONPayload.user.id;
 
   // find the slack user in the database
+  // if method is async, can use await and don't need 'then'
+  // const users = await knex.select('id')
   knex.select('id')
     .from('users')
     .where('slack_user_id', slack_user_id)
@@ -485,6 +450,8 @@ router.post('/actions', urlEncodedParser, (req, res) => {
 
         case constants.complexity.callback_id:
 
+          // if method is async, can use await and don't need 'then'
+          // const answers = await knex.select()
           knex.select()
             .from('answers')
             .where('user_id', userId)
@@ -552,6 +519,9 @@ router.post('/actions', urlEncodedParser, (req, res) => {
       console.error(error);
     });
 });
+
+// TODO:This file should only call controller actions
+// router.post('/path', create)
 
 
 module.exports = router;
