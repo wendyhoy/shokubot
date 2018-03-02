@@ -3,12 +3,18 @@ const request = require('request');
 function requestPromise(options) {
   return new Promise((resolve, reject) => {
     request(options, (error, response, body) => {
-      const JSONresponse = JSON.parse(body);
-      if (JSONresponse.ok) {
-        resolve(JSONresponse);
+      if (error) {
+        reject(error);
       }
       else {
-        reject(JSONresponse.error);
+        try {
+          const jsonResponse = JSON.parse(body);
+          resolve(jsonResponse);
+        }
+        catch(jsonError) {
+          console.log(jsonError);
+          resolve(body);
+        }
       }
     });
   });

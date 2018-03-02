@@ -27,8 +27,8 @@ class TeamController {
           response.bot.bot_access_token
         );
       })
-      .then(teamId => {
-        console.log(`Slack team added successfully: ${teamId}`);
+      .then(() => {
+        console.log('Slack team added successfully.');
         res.send('Add to Slack successful.')
       })
       .catch(error => {
