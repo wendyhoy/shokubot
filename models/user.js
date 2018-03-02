@@ -18,6 +18,12 @@ class User {
       });
   }
 
+  findBySlackUserId(slackUserId) {
+    return knex.select('id')
+      .from('users')
+      .where('slack_user_id', slackUserId);
+  }
+
 }
 
 module.exports = new User();
