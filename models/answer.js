@@ -1,13 +1,13 @@
 const knex = require('../db');
 
-class Answer {
+module.exports = {
 
   create(userId, autonomy) {
     return knex('answers').insert({
       user_id: userId,
       autonomy: autonomy
     });
-  }
+  },
 
   findLastAnswerByUserId(userId) {
     return knex.select()
@@ -15,7 +15,7 @@ class Answer {
       .where('user_id', userId)
       .orderBy('updated_at', 'desc')
       .limit(1);
-  }
+  },
 
   updateComplexity(answerId, complexity) {
     return knex('answers')
@@ -23,7 +23,7 @@ class Answer {
       .update({
         complexity: complexity
       });
-  }
+  },
 
   updateReward(answerId, reward) {
     return knex('answers')
@@ -33,6 +33,4 @@ class Answer {
       });
   }
 
-}
-
-module.exports = new Answer();
+};

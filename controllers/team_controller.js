@@ -1,9 +1,9 @@
 const requestPromise = require('../helpers/request_promise');
-const team = require('../models/team')
+const Team = require('../models/team')
 
-class TeamController {
+module.exports = {
 
-  create (req, res) {
+  async create (req, res) {
 
     // Slack verification code is stored in req.query.code
     // Send request back with verification code, client ID, and client secret
@@ -18,26 +18,23 @@ class TeamController {
     };
 
     // send request back and wait for JSON response from Slack
-    requestPromise(options)
-      .then(response => {
-        return team.create(
-          response.team_name,
-          response.team_id,
-          response.bot.bot_user_id,
-          response.bot.bot_access_token
-        );
-      })
-      .then(() => {
-        console.log('Slack team added successfully.');
-        res.send('Add to Slack successful.')
-      })
-      .catch(error => {
-        console.error(error);
-        res.send(error);
-      });
+    try {
+      const response = await requestPromise(options);
+      await Team.create(
+        response.team_name,
+        response.team_id,
+        response.bot.bot_user_id,
+        response.bot.bot_access_token
+      );
+
+      console.log('Slack team added successfully.');
+      res.send('Add to Slack successful.')
+    }
+    catch(error) {
+      console.error(error);
+      res.send(error);
+    }
 
   }
 
 }
-
-module.exports = new TeamController();

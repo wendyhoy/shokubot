@@ -1,11 +1,11 @@
-const answer = require('../models/answer');
-const user = require('../models/user');
-const content = require('../content');
+const Answer = require('../models/answer');
+const User = require('../models/user');
+const Content = require('../content');
 const { sendToSlackResponseUrl } = require('../helpers/helper_functions');
 
-class AnswerController {
+module.exports = {
 
-  update (req, res) {
+  async update (req, res) {
     // respond with ok status
     res.status(200).end();
 
@@ -18,91 +18,80 @@ class AnswerController {
     const jsonPayload = JSON.parse(req.body.payload);
     const slackUserId = jsonPayload.user.id;
 
-    // find the slack user in the database
-    user.findBySlackUserId(slackUserId)
-      .then(users => {
+    try {
+      // find the slack user in the database
+      const users = await User.findBySlackUserId(slackUserId);
 
-        const userId = users[0].id;
-        const callbackId = jsonPayload.callback_id;
-        const answerVal = jsonPayload.actions[0].value === 'yes' ? true : false;
+      const userId = users[0].id;
+      const callbackId = jsonPayload.callback_id;
+      const answerVal = jsonPayload.actions[0].value === 'yes' ? true : false;
 
-        // save response and send next message
-        switch (callbackId) {
+      // save response and send next message
+      switch (callbackId) {
 
-          case content.autonomy.callback_id:
+        case Content.autonomy.callback_id:
 
-            answer.create(userId, answerVal)
-              .then(() => {
-                console.log('Autonomy answer saved to the database.');
-              })
-              .catch(error => {
-                // TODO: handle error
-                console.error(error);
-              });
+          try {
+            await Answer.create(userId, answerVal);
+            console.log('Autonomy answer saved to the database.');
+          }
+          catch(error) {
+            console.error(error);
+          }
 
-            message.attachments = [
-              {
-                ...content.complexity
-              }
-            ];
-            break;
+          message.text = Content.reminder;
+          message.attachments = [
+            {
+              ...Content.complexity
+            }
+          ];
+          break;
 
-          case content.complexity.callback_id:
+        case Content.complexity.callback_id:
 
-            answer.findLastAnswerByUserId(userId)
-              .then(answers => {
-                return answer.updateComplexity(answers[0].id, answerVal);
-              })
-              .then(() => {
-                console.log('Complexity answer saved to the database.');
-              })
-              .catch(error => {
-                // TODO: handle error
-                console.error(error);
-              });
+          try {
+            const answers = await Answer.findLastAnswerByUserId(userId);
+            await Answer.updateComplexity(answers[0].id, answerVal);
+            console.log('Complexity answer saved to the database.');
+          }
+          catch(error) {
+            console.error(error);
+          }
 
-            message.attachments = [
-              {
-                ...content.reward
-              }
-            ];
-            break;
+          message.text = Content.reminder;
+          message.attachments = [
+            {
+              ...Content.reward
+            }
+          ];
+          break;
 
-          case content.reward.callback_id:
+        case Content.reward.callback_id:
 
-            answer.findLastAnswerByUserId(userId)
-              .then(answers => {
-                return answer.updateReward(answers[0].id, answerVal);
-              })
-              .then(() => {
-                console.log('Reward answer saved to the database.');
-              })
-              .catch(error => {
-                // TODO: handle error
-                console.error(error);
-              });
+          try {
+            const answers = await Answer.findLastAnswerByUserId(userId);
+            await Answer.updateReward(answers[0].id, answerVal);
+            console.log('Reward answer saved to the database.');
+          }
+          catch(error) {
+            console.error(error);
+          }
 
-              message.attachments = [
-                {
-                  ...content.done
-                }
-              ];
-            break;
+          message.text = Content.done;
+          break;
 
-          default:
-            message.text = 'Sorry, something went wrong.';
-            break;
-        }
+        default:
+          message.text = Content.error;
+          break;
+      }
 
-        const responseUrl = jsonPayload.response_url;
-        sendToSlackResponseUrl(responseUrl, message);
-      })
-      .catch(error => {
-        // TODO: handle error
-        console.error(error);
-      });
+      const responseUrl = jsonPayload.response_url;
+      sendToSlackResponseUrl(responseUrl, message);
+    }
+    catch(error) {
+      // TODO: handle error
+      console.error(error);
+    }
   }
 
 }
-
-module.exports = new AnswerController();

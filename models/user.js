@@ -1,6 +1,6 @@
 const knex = require('../db');
 
-class User {
+module.exports = {
 
   create(slackUserId, slackUserName, teamId) {
     return knex('users').insert({
@@ -8,7 +8,7 @@ class User {
       slack_user_name: slackUserName,
       team_id: teamId
     });
-  }
+  },
 
   saveReminders(slackUserId, reminders) {
     return knex('users')
@@ -16,14 +16,12 @@ class User {
       .update({
         reminders: JSON.stringify(reminders)
       });
-  }
+  },
 
   findBySlackUserId(slackUserId) {
     return knex.select('id')
       .from('users')
       .where('slack_user_id', slackUserId);
-  }
+  },
 
 }
-
-module.exports = new User();

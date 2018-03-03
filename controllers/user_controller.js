@@ -1,13 +1,13 @@
 const requestPromise = require('../helpers/request_promise');
 const { sendToSlackResponseUrl, setNextReminder } = require('../helpers/helper_functions');
 
-const team = require('../models/team');
-const user = require('../models/user');
-const content = require('../content.js');
+const Team = require('../models/team');
+const User = require('../models/user');
+const Content = require('../content.js');
 
-class UserController {
+module.exports = {
 
-  update (req, res) {
+  async update (req, res) {
 
     // private function to parse days and time from user string
     function getDaysAndTime(daysAndTime) {
@@ -79,7 +79,7 @@ class UserController {
     function convertDaysAndTime(slackUserId, reminders) {
 
       // get the team's slack bot access token to request user's timezone offset
-      return team.getSlackBotAccessToken(slackUserId)
+      return Team.getSlackBotAccessToken(slackUserId)
         .then(tokens => {
 
           const options = {
@@ -119,7 +119,7 @@ class UserController {
             reminders.days.push(sunday);
           }
 
-          return user.saveReminders(slackUserId, reminders);
+          return User.saveReminders(slackUserId, reminders);
         })
         .then(() => {
           return new Promise(resolve => {
@@ -154,92 +154,85 @@ class UserController {
       const slackUserName = reqBody.user_name;
       const slackTeamId = reqBody.team_id;
 
-      // find the slack team in the database and add new user, or find existing user
-      team.findBySlackTeamId(slackTeamId)
-        .then(teams => {
-          return user.create(slackUserId, slackUserName, teams[0].id)
-        })
-        .then(() => {
-          console.log('Slack user added successfully');
-        })
-        .catch(error => {
-          console.error(error);
-        })
-        .finally(() => {
+      try {
+        // find the slack team in the database and add new user, or find existing user
+        const teams = await Team.findBySlackTeamId(slackTeamId);
+        await User.create(slackUserId, slackUserName, teams[0].id);
 
-          console.log('Slack user added successfully for found existing user');
+        console.log('Slack user added successfully');
+      }
+      catch(error) {
+        console.error(error);
+      }
+      finally {
+        console.log('Slack user added successfully for found existing user');
 
-          // set up response message
-          let message = {
-            response_type: 'ephemeral'
-          };
+        // set up response message
+        let message = {
+          response_type: 'ephemeral'
+        };
 
-          // process command arguments
-          const args = reqBody.text.trim();
-          let firstArg = args;
-          let remainingArgs = '';
+        // process command arguments
+        const args = reqBody.text.trim();
+        let firstArg = args;
+        let remainingArgs = '';
 
-          const spaceIndex = args.indexOf(' ');
-          if (spaceIndex !== -1) {
-            firstArg = args.slice(0, spaceIndex);
-            remainingArgs = args.slice(spaceIndex).trim();
-          }
+        const spaceIndex = args.indexOf(' ');
+        if (spaceIndex !== -1) {
+          firstArg = args.slice(0, spaceIndex);
+          remainingArgs = args.slice(spaceIndex).trim();
+        }
 
-          switch (firstArg) {
-            case 'now':
+        switch (firstArg) {
+          case 'now':
+            message.attachments = [
+              {
+                ...Content.autonomy
+              }
+            ];
+            break;
+          case 'remind':
+            const reminders = getDaysAndTime(remainingArgs);
+            if (reminders !== null) {
+
+              try {
+                const remindersServerTime = await convertDaysAndTime(slackUserId, reminders);
+                console.log('Reminders saved to the database.');
+                setNextReminder(slackUserId, remindersServerTime);
+              }
+              catch(error) {
+                console.error(error);
+              }
+
+              message.text = `:thumbsup: I've set your reminders.`;
+            }
+            else {
               message.attachments = [
                 {
-                  ...content.autonomy
+                  ...Content.remind
                 }
               ];
-              break;
-            case 'remind':
-              const reminders = getDaysAndTime(remainingArgs);
-              if (reminders !== null) {
-
-                convertDaysAndTime(slackUserId, reminders)
-                  .then(remindersServerTime => {
-                    console.log('Reminders saved to the database.');
-                    setNextReminder(slackUserId, remindersServerTime);
-                  })
-                  .catch(error => {
-                    console.error(error);
-                  });
-
-                message.text = `:thumbsup: I've set your reminders.`;
+            }
+            break;
+          case 'pause':
+            message.text = 'Pause your reminders.';
+            break;
+          case 'unpause':
+            message.text = 'Unpause your reminders.';
+            break;
+          default:
+            message.attachments = [
+              {
+                ...Content.help
               }
-              else {
-                message.attachments = [
-                  {
-                    ...content.remind
-                  }
-                ];
-              }
-              break;
-            case 'pause':
-              message.text = 'Pause your reminders.';
-              break;
-            case 'resume':
-              message.text = 'Resume your reminders.';
-              break;
-            case 'stop':
-              message.text = 'Stop your reminders.';
-              break;
-            default:
-              message.attachments = [
-                {
-                  ...content.help
-                }
-              ];
-          }
+            ];
+        }
 
-          const responseUrl = reqBody.response_url;
-          sendToSlackResponseUrl(responseUrl, message);
-        });
+        const responseUrl = reqBody.response_url;
+        sendToSlackResponseUrl(responseUrl, message);
+      }
 
     }
   }
 
 }
-
-module.exports = new UserController();

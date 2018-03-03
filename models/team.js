@@ -1,6 +1,6 @@
 const knex = require('../db');
 
-class Team {
+module.exports = {
 
   create(slackTeamName, slackTeamId, botUserId, botAccessToken) {
     return knex('teams').insert({
@@ -9,13 +9,13 @@ class Team {
       slack_bot_user_id: botUserId,
       slack_bot_access_token: botAccessToken
     });
-  }
+  },
 
   findBySlackTeamId(slackTeamId) {
     return knex.select('id')
       .from('teams')
       .where('slack_team_id', slackTeamId);
-  }
+  },
 
   getSlackBotAccessToken(slackUserId) {
     return knex.select('slack_bot_access_token')
@@ -25,5 +25,3 @@ class Team {
   }
 
 }
-
-module.exports = new Team();

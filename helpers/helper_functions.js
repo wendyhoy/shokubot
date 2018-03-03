@@ -1,9 +1,9 @@
 const requestPromise = require('./request_promise');
 const timeoutPromise = require('./timeout_promise');
-const team = require('../models/team');
-const content = require('../content');
+const Team = require('../models/team');
+const Content = require('../content');
 
-function sendToSlackResponseUrl(responseUrl, jsonMessage) {
+async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
   const options = {
     uri: responseUrl,
     method: 'post',
@@ -13,13 +13,13 @@ function sendToSlackResponseUrl(responseUrl, jsonMessage) {
     json: jsonMessage
   };
 
-  requestPromise(options)
-    .then(response => {
-      console.log(`sendToSlackResponseUrl: response - ${response}`);
-    })
-    .catch(error => {
-      console.error(`sendToSlackResponseUrl: error - ${error}`);
-    });
+  try {
+    const response = await requestPromise(options);
+    console.log(`sendToSlackResponseUrl: response - ${response}`);
+  }
+  catch(error) {
+    console.error(`sendToSlackResponseUrl: error - ${error}`);
+  }
 }
 
 async function setNextReminder(slackUserId, reminders) {
@@ -55,7 +55,7 @@ async function setNextReminder(slackUserId, reminders) {
     await timeoutPromise(millisecondsLeft);
 
     // get token to access user's IM list
-    const tokens = await team.getSlackBotAccessToken(slackUserId);
+    const tokens = await Team.getSlackBotAccessToken(slackUserId);
     const slackBotAccessToken = tokens[0].slack_bot_access_token;
 
     // get user's IM list
@@ -89,10 +89,10 @@ async function setNextReminder(slackUserId, reminders) {
         channel: channelID,
         attachments: [
           {
-            ...content.autonomy
+            ...Content.autonomy
           }
         ],
-        text: 'Here are your questions for today!'
+        text: Content.reminder
       }
     };
 

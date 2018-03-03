@@ -1,5 +1,9 @@
 module.exports = {
 
+  done: ':thumbsup: Nice job! All done for today!',
+  error: 'Sorry, something went wrong.',
+  reminder: ':wave: Here\'s your reminder for today.',
+
   autonomy: {
     callback_id: 'autonomy',
     text: 'Did you have enough autonomy today?',
@@ -61,12 +65,6 @@ module.exports = {
         value: 'no'
       }
     ]
-  },
-
-  done: {
-    text: `:thumbsup: Nice job! All done for today!`,
-    fallback: `Nice job! All done for today!`,
-    color: '#F2E461'
   },
 
   remind: {
