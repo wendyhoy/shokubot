@@ -1,14 +1,10 @@
 const requestPromise = require('../helpers/request_promise');
+const { sendToSlackResponseUrl } = require('../helpers/helper_functions');
 
-const {
-  sendToSlackResponseUrl,
-  setNextReminder,
-  cancelReminders
-} = require('../helpers/helper_functions');
-
+const Timer = require('./timers_controller');
 const Team = require('../models/team');
 const User = require('../models/user');
-const Content = require('../content.js');
+const Content = require('../content');
 
 module.exports = {
 
@@ -203,7 +199,7 @@ module.exports = {
               try {
                 await setReminders(slackUserId, reminders);
                 console.log('Reminders saved to the database.');
-                setNextReminder(slackUserId);
+                Timer.setNextReminder(slackUserId);
               }
               catch(error) {
                 console.error(error);
@@ -220,11 +216,11 @@ module.exports = {
             }
             break;
           case 'pause':
-            cancelReminders(slackUserId);
+            Timer.cancelReminders(slackUserId);
             message.text = `:thumbsup: I've paused your reminders.`;
             break;
           case 'unpause':
-            setNextReminder(slackUserId);
+            Timer.setNextReminder(slackUserId);
             message.text = `:thumbsup: I've unpaused your reminders.`;
             break;
           default:

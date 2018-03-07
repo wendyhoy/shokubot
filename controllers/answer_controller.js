@@ -1,7 +1,9 @@
+const { sendToSlackResponseUrl } = require('../helpers/helper_functions');
+
+const Timer = require('./timers_controller');
 const Answer = require('../models/answer');
 const User = require('../models/user');
 const Content = require('../content');
-const { sendToSlackResponseUrl, setNextReminder } = require('../helpers/helper_functions');
 
 module.exports = {
 
@@ -71,7 +73,7 @@ module.exports = {
           try {
             const answers = await Answer.findLastAnswerByUserId(userId);
             await Answer.updateReward(answers[0].id, answerVal);
-            setNextReminder(slackUserId);
+            Timer.setNextReminder(slackUserId);
             console.log('Reward answer saved to the database. Next reminder set.');
           }
           catch(error) {
