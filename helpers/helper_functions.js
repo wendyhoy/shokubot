@@ -1,7 +1,9 @@
 const requestPromise = require('./request_promise');
-const timeoutPromise = require('./timeout_promise');
 const Team = require('../models/team');
+const User = require('../models/user');
 const Content = require('../content');
+
+const Timers = {};
 
 async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
   const options = {
@@ -22,37 +24,66 @@ async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
   }
 }
 
-async function setNextReminder(slackUserId, reminders) {
+function cancelReminders(slackUserId) {
 
-  // calculate milliseconds to next reminder
-  let today = new Date();
-  let dayIndex = today.getDay();
-  let daysLeft = 0;
-
-  const todayInSeconds = (today.getHours() * 60 + today.getMinutes()) * 60;
-  if (todayInSeconds > reminders.seconds) {
-    daysLeft++;
-    dayIndex++;
-    if (dayIndex > 6) {
-      dayIndex = 0;
-    }
+  // clear current timer
+  const timeout = Timers[slackUserId];
+  if (timeout) {
+    clearTimeout(timeout);
+    delete Timers[slackUserId];
   }
+}
 
-  while (!reminders.days[dayIndex]) {
-    daysLeft++;
-    dayIndex++;
-    if (dayIndex > 6) {
-      dayIndex = 0;
-    }
-  }
-
-  // set the timer
-  const millisecondsLeft = (daysLeft * 24 * 60 * 60 + reminders.seconds - todayInSeconds) * 1000;
-  console.log('setNextReminder: millisecondsLeft', millisecondsLeft);
+async function setNextReminder(slackUserId) {
 
   try {
-    // wait for timer to expire
-    await timeoutPromise(millisecondsLeft);
+    // calculate milliseconds to next reminder
+    let today = new Date();
+    let dayIndex = today.getDay();
+    let daysLeft = 0;
+
+    let reminders = await User.getReminders(slackUserId);
+    reminders = reminders[0].reminders;
+    console.log('setNextReminder: reminders', reminders);
+
+    const todayInSeconds = (today.getHours() * 60 + today.getMinutes()) * 60;
+    if (todayInSeconds >= reminders.seconds) {
+      daysLeft++;
+      dayIndex++;
+      if (dayIndex > 6) {
+        dayIndex = 0;
+      }
+    }
+
+    while (!reminders.days[dayIndex]) {
+      daysLeft++;
+      dayIndex++;
+      if (dayIndex > 6) {
+        dayIndex = 0;
+      }
+    }
+
+    // set the timer
+    const millisecondsLeft = (daysLeft * 24 * 60 * 60 + reminders.seconds - todayInSeconds) * 1000;
+    console.log('setNextReminder: millisecondsLeft', millisecondsLeft);
+
+    // cancel previous reminders
+    cancelReminders(slackUserId);
+
+    // set new reminder and save timeout object
+    const timeout = setTimeout(sendReminder, millisecondsLeft, slackUserId);
+    Timers[slackUserId] = timeout;
+  }
+  catch(error) {
+    console.error(error);
+  }
+
+}
+
+async function sendReminder(slackUserId) {
+
+  try {
+    console.log('sendReminder');
 
     // get token to access user's IM list
     const tokens = await Team.getSlackBotAccessToken(slackUserId);
@@ -67,7 +98,7 @@ async function setNextReminder(slackUserId, reminders) {
     };
 
     const response = await requestPromise(optionsImList);
-    console.log('setNextReminder: Received IM List.');
+    console.log('sendReminder: Received IM List.');
 
     let channelID = null;
     for (let i=0; i<response.ims.length; i++) {
@@ -96,8 +127,9 @@ async function setNextReminder(slackUserId, reminders) {
       }
     };
 
+    delete Timers[slackUserId];
     await requestPromise(optionsPostMessage);
-    console.log('setNextReminder: Success.')
+    console.log('sendReminder: Success.');
   }
   catch(error) {
     console.error(error);
@@ -105,5 +137,4 @@ async function setNextReminder(slackUserId, reminders) {
 
 }
 
-
-module.exports = { sendToSlackResponseUrl, setNextReminder }
+module.exports = { sendToSlackResponseUrl, setNextReminder, cancelReminders }

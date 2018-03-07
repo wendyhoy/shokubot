@@ -1,5 +1,10 @@
 const requestPromise = require('../helpers/request_promise');
-const { sendToSlackResponseUrl, setNextReminder } = require('../helpers/helper_functions');
+
+const {
+  sendToSlackResponseUrl,
+  setNextReminder,
+  cancelReminders
+} = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
 const User = require('../models/user');
@@ -75,8 +80,8 @@ module.exports = {
     }
 
 
-    // private function to convert reminders to server time
-    function convertDaysAndTime(slackUserId, reminders) {
+    // private function to convert and save reminders to server time
+    function setReminders(slackUserId, reminders) {
 
       // get the team's slack bot access token to request user's timezone offset
       return Team.getSlackBotAccessToken(slackUserId)
@@ -119,7 +124,7 @@ module.exports = {
             reminders.days.push(sunday);
           }
 
-          return User.saveReminders(slackUserId, reminders);
+          return User.setReminders(slackUserId, reminders);
         })
         .then(() => {
           return new Promise(resolve => {
@@ -196,9 +201,9 @@ module.exports = {
             if (reminders !== null) {
 
               try {
-                const remindersServerTime = await convertDaysAndTime(slackUserId, reminders);
+                await setReminders(slackUserId, reminders);
                 console.log('Reminders saved to the database.');
-                setNextReminder(slackUserId, remindersServerTime);
+                setNextReminder(slackUserId);
               }
               catch(error) {
                 console.error(error);
@@ -215,10 +220,12 @@ module.exports = {
             }
             break;
           case 'pause':
-            message.text = 'Pause your reminders.';
+            cancelReminders(slackUserId);
+            message.text = `:thumbsup: I've paused your reminders.`;
             break;
           case 'unpause':
-            message.text = 'Unpause your reminders.';
+            setNextReminder(slackUserId);
+            message.text = `:thumbsup: I've unpaused your reminders.`;
             break;
           default:
             message.attachments = [

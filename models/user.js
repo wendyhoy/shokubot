@@ -10,7 +10,13 @@ module.exports = {
     });
   },
 
-  saveReminders(slackUserId, reminders) {
+  findBySlackUserId(slackUserId) {
+    return knex.select('id')
+      .from('users')
+      .where('slack_user_id', slackUserId);
+  },
+
+  setReminders(slackUserId, reminders) {
     return knex('users')
       .where('slack_user_id', slackUserId)
       .update({
@@ -18,10 +24,10 @@ module.exports = {
       });
   },
 
-  findBySlackUserId(slackUserId) {
-    return knex.select('id')
+  getReminders(slackUserId) {
+    return knex.select('reminders')
       .from('users')
       .where('slack_user_id', slackUserId);
-  },
+  }
 
 }
