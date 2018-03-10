@@ -4,6 +4,8 @@ module.exports = {
   error: 'Sorry, something went wrong.',
   reminder: ':wave: Here\'s your reminder for today.',
 
+  welcome: 'Hello, I\'m Shokubot. I\'m here to help you track your team\'s wellness! Team members can set a daily reminder by typing `/shokubot remind [when]` from any channel, and I\'ll send them their reminders directly to answer three simple questions about their day. To see how your team is doing, visit the Shokubot website. If you need more assistance, type `/shokubot help`. Good luck!',
+
   autonomy: {
     callback_id: 'autonomy',
     text: 'Did you have enough autonomy today?',

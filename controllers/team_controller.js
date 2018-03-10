@@ -1,5 +1,8 @@
 const requestPromise = require('../helpers/request_promise');
-const Team = require('../models/team')
+const { sendToSlackIMChannel, getSlackImChannel } = require('../helpers/helper_functions');
+
+const Team = require('../models/team');
+const Content = require('../content');
 
 module.exports = {
 
@@ -20,14 +23,32 @@ module.exports = {
     // send request back and wait for JSON response from Slack
     try {
       const response = await requestPromise(options);
+      console.log('Shokubot added successfully: ', response);
+
+      const { team_name, team_id, user_id, bot } = response;
+      const { bot_user_id, bot_access_token } = bot;
+
       await Team.create(
-        response.team_name,
-        response.team_id,
-        response.bot.bot_user_id,
-        response.bot.bot_access_token
+        team_name,
+        team_id,
+        bot_user_id,
+        bot_access_token
       );
 
+      // Slack team was added successfully
       console.log('Slack team added successfully.');
+
+      // Get this user's DM channel ID
+      const channelID = await getSlackImChannel(bot_access_token, user_id);
+
+      // DM the user with onboarding information
+      const message = {
+        channel: channelID,
+        text: Content.welcome
+      };
+
+      await sendToSlackIMChannel(bot_access_token, message);
+
       res.send('Add to Slack successful.')
     }
     catch(error) {

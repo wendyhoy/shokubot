@@ -135,7 +135,7 @@ module.exports = {
     }
 
 
-    // Handle remind slash command
+    // Handle slash commands
     // respond with status 200
     res.status(200).end();
 
@@ -159,6 +159,14 @@ module.exports = {
         // find the slack team in the database and add new user, or find existing user
         const teams = await Team.findBySlackTeamId(slackTeamId);
         await User.create(slackUserId, slackUserName, teams[0].id);
+
+        // store the User's IM channel ID
+
+
+
+        // store the User's timezone offset
+
+
 
         console.log('Slack user added successfully');
       }

@@ -1,4 +1,5 @@
 const requestPromise = require('../helpers/request_promise');
+const { sendToSlackIMChannel, getSlackImChannel } = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
 const User = require('../models/user');
@@ -31,45 +32,21 @@ module.exports = {
         const slackBotAccessToken = tokens[0].slack_bot_access_token;
 
         // get user's IM list
-        const optionsImList = {
-          uri:
-            'https://slack.com/api/im.list?token='
-            +slackBotAccessToken,
-          method: 'get'
-        };
-
-        const response = await requestPromise(optionsImList);
-        console.log('sendReminder: Received IM List.');
-
-        let channelID = null;
-        for (let i=0; i<response.ims.length; i++) {
-          if (response.ims[i].user === slackUserId) {
-            channelID = response.ims[i].id;
-            break;
-          }
-        }
+        const channelID = await getSlackImChannel(slackBotAccessToken, slackUserId);
 
         // post first question to user's IM channel
-        const optionsPostMessage = {
-          uri: 'https://slack.com/api/chat.postMessage',
-          method: 'post',
-          headers: {
-            'Content-type': 'application/json',
-            'Authorization': 'Bearer '+slackBotAccessToken
-          },
-          json: {
-            channel: channelID,
-            attachments: [
-              {
-                ...Content.autonomy
-              }
-            ],
-            text: Content.reminder
-          }
+        const message = {
+          channel: channelID,
+          attachments: [
+            {
+              ...Content.autonomy
+            }
+          ],
+          text: Content.reminder
         };
 
         delete timers[slackUserId];
-        await requestPromise(optionsPostMessage);
+        await sendToSlackIMChannel(slackBotAccessToken, message);
         console.log('sendReminder: Success.');
       }
       catch(error) {
