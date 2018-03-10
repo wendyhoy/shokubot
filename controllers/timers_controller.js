@@ -1,5 +1,5 @@
 const requestPromise = require('../helpers/request_promise');
-const { sendToSlackIMChannel, getSlackImChannel } = require('../helpers/helper_functions');
+const { sendToSlackImChannel } = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
 const User = require('../models/user');
@@ -32,11 +32,11 @@ module.exports = {
         const slackBotAccessToken = tokens[0].slack_bot_access_token;
 
         // get user's IM list
-        const channelID = await getSlackImChannel(slackBotAccessToken, slackUserId);
+        const channelIds = await User.getSlackImChannelId(slackUserId);
 
         // post first question to user's IM channel
         const message = {
-          channel: channelID,
+          channel: channelIds[0].slack_im_channel_id,
           attachments: [
             {
               ...Content.autonomy
@@ -46,7 +46,7 @@ module.exports = {
         };
 
         delete timers[slackUserId];
-        await sendToSlackIMChannel(slackBotAccessToken, message);
+        await sendToSlackImChannel(slackBotAccessToken, message);
         console.log('sendReminder: Success.');
       }
       catch(error) {

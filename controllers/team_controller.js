@@ -1,5 +1,5 @@
 const requestPromise = require('../helpers/request_promise');
-const { sendToSlackIMChannel, getSlackImChannel } = require('../helpers/helper_functions');
+const { sendToSlackImChannel, getSlackImChannel } = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
 const Content = require('../content');
@@ -39,15 +39,15 @@ module.exports = {
       console.log('Slack team added successfully.');
 
       // Get this user's DM channel ID
-      const channelID = await getSlackImChannel(bot_access_token, user_id);
+      const channelId = await getSlackImChannel(bot_access_token, user_id);
 
       // DM the user with onboarding information
       const message = {
-        channel: channelID,
+        channel: channelId,
         text: Content.welcome
       };
 
-      await sendToSlackIMChannel(bot_access_token, message);
+      await sendToSlackImChannel(bot_access_token, message);
 
       res.send('Add to Slack successful.')
     }

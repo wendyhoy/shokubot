@@ -12,7 +12,7 @@ module.exports = {
   },
 
   findBySlackTeamId(slackTeamId) {
-    return knex.select('id')
+    return knex.select('id', 'slack_bot_access_token')
       .from('teams')
       .where('slack_team_id', slackTeamId);
   },

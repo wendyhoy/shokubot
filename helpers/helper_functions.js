@@ -19,7 +19,7 @@ async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
   }
 }
 
-async function sendToSlackIMChannel(accessToken, jsonMessage) {
+async function sendToSlackImChannel(accessToken, jsonMessage) {
   const options = {
     uri: 'https://slack.com/api/chat.postMessage',
     method: 'post',
@@ -32,10 +32,10 @@ async function sendToSlackIMChannel(accessToken, jsonMessage) {
 
   try {
     const response = await requestPromise(options);
-    console.log(`sendToSlackIMChannel: response - ${response}`);
+    console.log(`sendToSlackImChannel: response - ${response}`);
   }
   catch(error) {
-    console.error(`sendToSlackIMChannel: error - ${error}`);
+    console.error(`sendToSlackImChannel: error - ${error}`);
   }
 }
 
@@ -65,9 +65,28 @@ async function getSlackImChannel(accessToken, slackUserId) {
   }
 }
 
+async function getSlackUserInfo(slackBotAccessToken, slackUserId) {
+  const options = {
+    uri:
+      'https://slack.com/api/users.info?token='
+      +slackBotAccessToken
+      +'&user='+slackUserId,
+    method: 'get'
+  };
+
+  try {
+    const response = await requestPromise(options);
+    return response;
+  }
+  catch(error) {
+    return error;
+  }
+}
+
 
 module.exports = {
   sendToSlackResponseUrl,
-  sendToSlackIMChannel,
-  getSlackImChannel
+  sendToSlackImChannel,
+  getSlackImChannel,
+  getSlackUserInfo
 }

@@ -1,5 +1,7 @@
-const requestPromise = require('../helpers/request_promise');
-const { sendToSlackResponseUrl } = require('../helpers/helper_functions');
+const {
+  sendToSlackResponseUrl,
+  getSlackUserInfo
+} = require('../helpers/helper_functions');
 
 const Timer = require('./timers_controller');
 const Team = require('../models/team');
@@ -80,21 +82,8 @@ module.exports = {
     function setReminders(slackUserId, reminders) {
 
       // get the team's slack bot access token to request user's timezone offset
-      return Team.getSlackBotAccessToken(slackUserId)
-        .then(tokens => {
-
-          const options = {
-            uri:
-              'https://slack.com/api/users.info?token='
-              +tokens[0].slack_bot_access_token
-              +'&user='+slackUserId,
-            method: 'get'
-          };
-
-          // request the user's timezone offset
-          return requestPromise(options);
-        })
-        .then(response => {
+      return User.getSlackTimezoneOffset(slackUserId)
+        .then(tzOffsets => {
 
           // conversion from user time to server time
           // getTimezoneOffset returns minutes; positive if behind, negative if ahead
@@ -102,7 +91,7 @@ module.exports = {
           // save conversion in seconds
           const serverTime = new Date();
           const serverTimezoneOffset = serverTime.getTimezoneOffset() * 60;
-          const conversion = (-serverTimezoneOffset - response.user.tz_offset);
+          const conversion = (-serverTimezoneOffset - tzOffsets[0].slack_tz_offset);
 
           // convert reminders
           reminders.seconds += conversion;
@@ -150,23 +139,20 @@ module.exports = {
     }
     else {
 
-      // Get slack user id
-      const slackUserId = reqBody.user_id;
-      const slackUserName = reqBody.user_name;
-      const slackTeamId = reqBody.team_id;
+      // Get slack request
+      const { team_id, user_id, channel_id, response_url } = reqBody;
 
       try {
         // find the slack team in the database and add new user, or find existing user
-        const teams = await Team.findBySlackTeamId(slackTeamId);
-        await User.create(slackUserId, slackUserName, teams[0].id);
+        const teams = await Team.findBySlackTeamId(team_id);
+        await User.create(user_id, channel_id, teams[0].id);
 
-        // store the User's IM channel ID
+        // save the user's real name and timezone offset
+        const response = await getSlackUserInfo(teams[0].slack_bot_access_token, user_id);
 
-
-
-        // store the User's timezone offset
-
-
+        const { user } = response;
+        const { real_name, tz_offset } = user;
+        await User.update(user_id, real_name, tz_offset);
 
         console.log('Slack user added successfully');
       }
@@ -205,9 +191,9 @@ module.exports = {
             if (reminders !== null) {
 
               try {
-                await setReminders(slackUserId, reminders);
+                await setReminders(user_id, reminders);
                 console.log('Reminders saved to the database.');
-                Timer.setNextReminder(slackUserId);
+                Timer.setNextReminder(user_id);
               }
               catch(error) {
                 console.error(error);
@@ -224,11 +210,11 @@ module.exports = {
             }
             break;
           case 'pause':
-            Timer.cancelReminders(slackUserId);
+            Timer.cancelReminders(user_id);
             message.text = `:thumbsup: I've paused your reminders.`;
             break;
           case 'unpause':
-            Timer.setNextReminder(slackUserId);
+            Timer.setNextReminder(user_id);
             message.text = `:thumbsup: I've unpaused your reminders.`;
             break;
           default:
@@ -239,8 +225,7 @@ module.exports = {
             ];
         }
 
-        const responseUrl = reqBody.response_url;
-        sendToSlackResponseUrl(responseUrl, message);
+        sendToSlackResponseUrl(response_url, message);
       }
 
     }
