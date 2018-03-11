@@ -4,6 +4,7 @@ const {
 } = require('../helpers/helper_functions');
 
 const Timer = require('./timers_controller');
+const Answer = require('../models/answer');
 const Team = require('../models/team');
 const User = require('../models/user');
 const Content = require('../content');
@@ -85,25 +86,10 @@ module.exports = {
       return User.getSlackTimezoneOffset(slackUserId)
         .then(tzOffsets => {
 
-          // conversion from user time to UTC time
-          // tz_offset is in seconds, but is negative if behind, positive if ahead
-
-          // convert reminders
-          reminders.seconds -= tzOffsets[0].slack_tz_offset;
-
-          // if seconds is greater than one day, i.e., rollover
-          const secondsPerDay = 24 * 60 * 60;
-          if (reminders.seconds > secondsPerDay) {
-            reminders.seconds -= secondsPerDay;
-            const saturday = reminders.days.pop();
-            reminders.days.unshift(saturday);
-          }
-          else if (reminders.seconds < 0) {
-            reminders.seconds += secondsPerDay;
-            const sunday = reminders.days.shift();
-            reminders.days.push(sunday);
-          }
-
+          // convert from user time to UTC time
+          // slack_tz_offset is in seconds, is negative if behind, positive if ahead
+          // so we need to SUBTRACT the client's timezone offset
+          reminders = Timer.applyTimezone(reminders, -tzOffsets[0].slack_tz_offset);
           return User.setReminders(slackUserId, reminders);
         })
         .then(() => {
@@ -124,22 +110,18 @@ module.exports = {
         let reminders = await User.getReminders(slackUserId);
         reminders = reminders[0].reminders;
 
-        let tzOffset = await User.getSlackTimezoneOffset(slackUserId);
-        tzOffset = tzOffset[0].slack_tz_offset;
-        reminders.seconds += tzOffset;
-
-        const secondsPerDay = 24 * 60 * 60;
-        if (reminders.seconds > secondsPerDay) {
-          reminders.seconds -= secondsPerDay;
-          const saturday = reminders.days.pop();
-          reminders.days.unshift(saturday);
-        }
-        else if (reminders.seconds < 0) {
-          reminders.seconds += secondsPerDay;
-          const sunday = reminders.days.shift();
-          reminders.days.push(sunday);
+        // if no reminders, return empty string
+        if (!reminders) {
+          return null;
         }
 
+        // convert the reminders from UTC time back to the client's time
+        // slack_tz_offset is in seconds, is negative if behind, positive if ahead
+        // so we need to ADD the client's timezone offset
+        const tzOffsets = await User.getSlackTimezoneOffset(slackUserId);
+        reminders = Timer.applyTimezone(reminders, tzOffsets[0].slack_tz_offset);
+
+        // get which days the client has set reminders
         let reminderArr = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays',
                            'Thursdays', 'Fridays', 'Saturdays'];
 
@@ -149,6 +131,7 @@ module.exports = {
           }
         }
 
+        // get the time formatted
         let minutes = reminders.seconds / 60;
         let hours = Math.trunc(minutes / 60);
         minutes = (minutes % 60).toString().padStart(2, '0');
@@ -230,11 +213,27 @@ module.exports = {
 
         switch (firstArg) {
           case 'now':
-            message.attachments = [
-              {
-                ...Content.autonomy
+            try {
+              // check if already answered today
+              const isDoneToday = await Timer.isDoneToday(user_id);
+              if (isDoneToday) {
+                console.log('shokubot now: done for today');
+                message.text = Content.tryAgain;
               }
-            ];
+              else {
+                console.log('shokubot now: sending first question');
+                message.text = Content.reminder;
+                message.attachments = [
+                  {
+                    ...Content.autonomy
+                  }
+                ];
+              }
+            }
+            catch(error) {
+              console.error(error);
+              message.text = Content.error;
+            }
             break;
           case 'remind':
             const reminders = getDaysAndTime(remainingArgs);
@@ -262,23 +261,52 @@ module.exports = {
             }
             break;
           case 'pause':
-            Timer.cancelReminders(user_id);
-            message.text = Content.pauseReminders;
-            break;
-          case 'unpause':
             try {
-              const dateStr = await Timer.setNextReminder(user_id);
-              message.text = `${Content.unpauseReminders}${dateStr}.`;
+              // check if there are reminders
+              const reminders = await User.getReminders(user_id);
+              const remindersObj = reminders[0].reminders;
+
+              if (remindersObj) {
+                Timer.cancelReminders(user_id);
+                message.text = Content.pauseReminders;
+              }
+              else {
+                message.text = Content.noReminders;
+              }
             }
             catch(error) {
               console.error(error);
-              message.text = Content.error;              
+              message.text = Content.error;
+            }            break;
+          case 'unpause':
+            try {
+              const dateStr = await Timer.setNextReminder(user_id);
+              if (dateStr) {
+                message.text = `${Content.unpauseReminders}${dateStr}.`;
+              }
+              else {
+                message.text = Content.noReminders;
+              }
+            }
+            catch(error) {
+              console.error(error);
+              message.text = Content.error;
             }
             break;
           case 'info':
             try {
               const reminderStr = await getReminderString(user_id);
-              message.text = `${Content.info}${reminderStr}.`;
+              if (reminderStr) {
+                if (Timer.hasReminder(user_id)) {
+                  message.text = `${Content.infoActive}${reminderStr}.`;
+                }
+                else {
+                  message.text = `${Content.infoPaused}${reminderStr}.`;
+                }
+              }
+              else {
+                message.text = Content.noReminders;
+              }
             }
             catch(error) {
               console.error(error);

@@ -2,13 +2,16 @@ module.exports = {
 
   done: ':thumbsup: Nice job! All done for today!',
   error: 'Sorry, something went wrong.',
-  reminder: ':wave: Here\'s your reminder for today.',
+  reminder: ':wave: Here are your questions for today.',
 
   setReminders: ':thumbsup: I\'ve set your reminders. Your next reminder is ',
   pauseReminders: ':thumbsup: I\'ve paused your reminders. Hope you come back soon!',
   unpauseReminders: ':thumbsup: I\'ve unpaused your reminders. Your next reminder is ',
 
-  info: 'Your reminders are set for ',
+  infoPaused: 'Your reminders are currently paused. They are set for ',
+  infoActive: 'Your reminders are currently active. They are set for ',
+  tryAgain: 'You\'ve answered all your questions for today, but they\'ll be available again tomorrow.',
+  noReminders: 'You don\'t have any reminders. Use `/shokubot remind` to set your next reminder.',
 
   welcome: 'Hello, I\'m Shokubot. I\'m here to help you track your team\'s wellness! Team members can set a daily reminder by typing `/shokubot remind [when]` from any channel, and I\'ll send them their reminders directly to answer three simple questions about their day. To see how your team is doing, visit the Shokubot website. If you need more assistance, type `/shokubot help`. Good luck!',
 
