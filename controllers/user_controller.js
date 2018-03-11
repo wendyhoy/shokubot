@@ -61,12 +61,12 @@ module.exports = {
         days.fill(true, 1, 6);
       }
       else if (range) {
-        const start = dayToIndex[range[1]];
-        const end = dayToIndex[range[2]] + 1;
+        const start = dayToIndex[range[1].toLowerCase()];
+        const end = dayToIndex[range[2].toLowerCase()] + 1;
         days.fill(true, start, end);
       }
       else if (list) {
-        const listStr = list[0];
+        const listStr = list[0].toLowerCase();
         const listArr = listStr.match(/(sun|mon|tues|wednes|thurs|fri|satur)/gi);
         listArr.forEach(day => {
           const index = dayToIndex[day];
@@ -78,23 +78,18 @@ module.exports = {
     }
 
 
-    // private function to convert and save reminders to server time
+    // private function to convert and save reminders to UTC time
     function setReminders(slackUserId, reminders) {
 
-      // get the team's slack bot access token to request user's timezone offset
+      // get the user's timezone offset
       return User.getSlackTimezoneOffset(slackUserId)
         .then(tzOffsets => {
 
-          // conversion from user time to server time
-          // getTimezoneOffset returns minutes; positive if behind, negative if ahead
+          // conversion from user time to UTC time
           // tz_offset is in seconds, but is negative if behind, positive if ahead
-          // save conversion in seconds
-          const serverTime = new Date();
-          const serverTimezoneOffset = serverTime.getTimezoneOffset() * 60;
-          const conversion = (-serverTimezoneOffset - tzOffsets[0].slack_tz_offset);
 
           // convert reminders
-          reminders.seconds += conversion;
+          reminders.seconds -= tzOffsets[0].slack_tz_offset;
 
           // if seconds is greater than one day, i.e., rollover
           const secondsPerDay = 24 * 60 * 60;
@@ -121,6 +116,61 @@ module.exports = {
             reject(error);
           });
         });
+    }
+
+    // private function to convert reminders to a formatted string
+    async function getReminderString(slackUserId) {
+      try {
+        let reminders = await User.getReminders(slackUserId);
+        reminders = reminders[0].reminders;
+
+        let tzOffset = await User.getSlackTimezoneOffset(slackUserId);
+        tzOffset = tzOffset[0].slack_tz_offset;
+        reminders.seconds += tzOffset;
+
+        const secondsPerDay = 24 * 60 * 60;
+        if (reminders.seconds > secondsPerDay) {
+          reminders.seconds -= secondsPerDay;
+          const saturday = reminders.days.pop();
+          reminders.days.unshift(saturday);
+        }
+        else if (reminders.seconds < 0) {
+          reminders.seconds += secondsPerDay;
+          const sunday = reminders.days.shift();
+          reminders.days.push(sunday);
+        }
+
+        let reminderArr = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays',
+                           'Thursdays', 'Fridays', 'Saturdays'];
+
+        for (let i=reminders.days.length-1; i>=0; i--) {
+          if (!reminders.days[i]) {
+            reminderArr.splice(i, 1);
+          }
+        }
+
+        let minutes = reminders.seconds / 60;
+        let hours = Math.trunc(minutes / 60);
+        minutes = (minutes % 60).toString().padStart(2, '0');
+
+        let amOrPm = 'am';
+        if (hours === 0 || hours === 24) {
+          hours = 12;
+        }
+        else if (hours === 12) {
+          amOrPm = 'pm';
+        }
+        else if (hours > 12) {
+          hours -= 12;
+          amOrPm = 'pm';
+        }
+
+        const reminderStr = `${reminderArr.join(', ')} at ${hours}:${minutes} ${amOrPm}`;
+        return reminderStr;
+      }
+      catch(error) {
+        return error;
+      }
     }
 
 
@@ -192,14 +242,16 @@ module.exports = {
 
               try {
                 await setReminders(user_id, reminders);
-                console.log('Reminders saved to the database.');
-                Timer.setNextReminder(user_id);
+                console.log('Reminders saved to the database: ', reminders);
+
+                const dateStr = await Timer.setNextReminder(user_id);
+                message.text = `${Content.setReminders}${dateStr}.`;
+
               }
               catch(error) {
                 console.error(error);
+                message.text = Content.error;
               }
-
-              message.text = `:thumbsup: I've set your reminders.`;
             }
             else {
               message.attachments = [
@@ -211,11 +263,27 @@ module.exports = {
             break;
           case 'pause':
             Timer.cancelReminders(user_id);
-            message.text = `:thumbsup: I've paused your reminders.`;
+            message.text = Content.pauseReminders;
             break;
           case 'unpause':
-            Timer.setNextReminder(user_id);
-            message.text = `:thumbsup: I've unpaused your reminders.`;
+            try {
+              const dateStr = await Timer.setNextReminder(user_id);
+              message.text = `${Content.unpauseReminders}${dateStr}.`;
+            }
+            catch(error) {
+              console.error(error);
+              message.text = Content.error;              
+            }
+            break;
+          case 'info':
+            try {
+              const reminderStr = await getReminderString(user_id);
+              message.text = `${Content.info}${reminderStr}.`;
+            }
+            catch(error) {
+              console.error(error);
+              message.text = Content.error;
+            }
             break;
           default:
             message.attachments = [

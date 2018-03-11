@@ -4,6 +4,12 @@ module.exports = {
   error: 'Sorry, something went wrong.',
   reminder: ':wave: Here\'s your reminder for today.',
 
+  setReminders: ':thumbsup: I\'ve set your reminders. Your next reminder is ',
+  pauseReminders: ':thumbsup: I\'ve paused your reminders. Hope you come back soon!',
+  unpauseReminders: ':thumbsup: I\'ve unpaused your reminders. Your next reminder is ',
+
+  info: 'Your reminders are set for ',
+
   welcome: 'Hello, I\'m Shokubot. I\'m here to help you track your team\'s wellness! Team members can set a daily reminder by typing `/shokubot remind [when]` from any channel, and I\'ll send them their reminders directly to answer three simple questions about their day. To see how your team is doing, visit the Shokubot website. If you need more assistance, type `/shokubot help`. Good luck!',
 
   autonomy: {
@@ -80,9 +86,9 @@ module.exports = {
   help: {
     pretext: ':wave: Need help with `/shokubot`?',
 
-    text: 'Use `/shokubot now` to answer your three questions for today. Or use the commands below to manage your reminders:\n• `/shokubot remind`\n• `/shokubot pause`\n• `/shokubot resume`\n• `/shokubot stop`',
+    text: 'Use `/shokubot now` to answer your three questions for today. Or use the commands below to manage your reminders:\n• `/shokubot remind`\n• `/shokubot pause`\n• `/shokubot unpause`\n• `/shokubot info`',
 
-    fallback: 'Need help with \'/shokubot\'? Use \'shokubot now\' to answer your three questions for today. Or use \'shokubot remind\', \'shokubot pause\', \'shokubot resume\' and \'shokubot stop\' to manage your reminders.'
+    fallback: 'Need help with \'/shokubot\'? Use \'shokubot now\' to answer your three questions for today. Or use \'shokubot remind\', \'shokubot pause\', \'shokubot unpause\' and \'shokubot info\' to manage your reminders.'
   }
 
 };
