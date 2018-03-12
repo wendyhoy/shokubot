@@ -244,7 +244,7 @@ module.exports = {
                 console.log('Reminders saved to the database: ', reminders);
 
                 const dateStr = await Timer.setNextReminder(user_id);
-                message.text = `${Content.setReminders}${dateStr}.`;
+                message.text = `${Content.setReminders} ${Content.nextReminder}${dateStr}.`;
 
               }
               catch(error) {
@@ -282,7 +282,7 @@ module.exports = {
             try {
               const dateStr = await Timer.setNextReminder(user_id);
               if (dateStr) {
-                message.text = `${Content.unpauseReminders}${dateStr}.`;
+                message.text = `${Content.unpauseReminders} ${Content.nextReminder}${dateStr}.`;
               }
               else {
                 message.text = Content.noReminders;

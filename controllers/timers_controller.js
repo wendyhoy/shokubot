@@ -182,14 +182,11 @@ module.exports = {
         }
       };
 
+      // if the user has already answered the question for today OR
       // if we're already passed the reminder time for today, go to the next day
-      if (todayInSeconds >= reminders.seconds) {
-        incrementDay();
-      }
-
-      // if the user has already answered the question for today, go to the next day
       const isDoneToday = await this.isDoneToday(slackUserId);
-      if (isDoneToday) {
+      if (isDoneToday || (todayInSeconds >= reminders.seconds)) {
+        console.log('setNextReminder: passed the reminder time today or already done.');
         incrementDay();
       }
 

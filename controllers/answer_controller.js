@@ -36,17 +36,18 @@ module.exports = {
           try {
             await Answer.create(userId, answerVal);
             console.log('Autonomy answer saved to the database.');
+
+            message.text = Content.reminder;
+            message.attachments = [
+              {
+                ...Content.complexity
+              }
+            ];
           }
           catch(error) {
             console.error(error);
+            message.text = Content.error;
           }
-
-          message.text = Content.reminder;
-          message.attachments = [
-            {
-              ...Content.complexity
-            }
-          ];
           break;
 
         case Content.complexity.callback_id:
@@ -55,17 +56,18 @@ module.exports = {
             const answers = await Answer.findLastAnswerByUserId(userId);
             await Answer.updateComplexity(answers[0].id, answerVal);
             console.log('Complexity answer saved to the database.');
+
+            message.text = Content.reminder;
+            message.attachments = [
+              {
+                ...Content.reward
+              }
+            ];
           }
           catch(error) {
             console.error(error);
+            message.text = Content.error;
           }
-
-          message.text = Content.reminder;
-          message.attachments = [
-            {
-              ...Content.reward
-            }
-          ];
           break;
 
         case Content.reward.callback_id:
@@ -73,14 +75,18 @@ module.exports = {
           try {
             const answers = await Answer.findLastAnswerByUserId(userId);
             await Answer.updateReward(answers[0].id, answerVal);
-            Timer.setNextReminder(slackUserId);
+            message.text = Content.done;
+
+            const dateStr = await Timer.setNextReminder(slackUserId);
+            if (dateStr) {
+              message.text += ` ${Content.nextReminder}${dateStr}.`;
+            }
             console.log('Reward answer saved to the database. Next reminder set.');
           }
           catch(error) {
             console.error(error);
+            message.text = Content.error;
           }
-
-          message.text = Content.done;
           break;
 
         default:
