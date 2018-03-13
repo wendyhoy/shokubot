@@ -241,6 +241,7 @@ module.exports = {
 
               try {
                 await setReminders(user_id, reminders);
+                await User.setPaused(user_id, false);
                 console.log('Reminders saved to the database: ', reminders);
 
                 const dateStr = await Timer.setNextReminder(user_id);
@@ -268,6 +269,7 @@ module.exports = {
 
               if (remindersObj) {
                 Timer.cancelReminders(user_id);
+                await User.setPaused(user_id, true);
                 message.text = Content.pauseReminders;
               }
               else {
@@ -282,6 +284,7 @@ module.exports = {
             try {
               const dateStr = await Timer.setNextReminder(user_id);
               if (dateStr) {
+                await User.setPaused(user_id, false);
                 message.text = `${Content.unpauseReminders} ${Content.nextReminder}${dateStr}.`;
               }
               else {

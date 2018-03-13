@@ -2,6 +2,13 @@ const knex = require('../db');
 
 module.exports = {
 
+  all() {
+    return knex.select('slack_user_id')
+      .from('users')
+      .whereNotNull('reminders')
+      .where('paused', false);
+  },
+
   create(slackUserId, slackImChannelId, teamId) {
     return knex('users').insert({
       slack_user_id: slackUserId,
@@ -49,6 +56,21 @@ module.exports = {
     return knex.select('reminders')
       .from('users')
       .where('slack_user_id', slackUserId);
+  },
+
+  setPaused(slackUserId, value) {
+    return knex('users')
+      .where('slack_user_id', slackUserId)
+      .update({
+        paused: value
+      });
+  },
+
+  isPaused(slackUserId) {
+    return knex.select('paused')
+      .from('users')
+      .where('slack_user_id', slackUserId);
   }
+
 
 }

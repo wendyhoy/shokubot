@@ -9,6 +9,9 @@ const app = require('../app');
 const debug = require('debug')('shokubot:server');
 const http = require('http');
 
+const User = require('../models/user');
+const Timer = require('../controllers/timers_controller');
+
 /**
  * Get port from environment and store in Express.
  */
@@ -88,4 +91,18 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+
+  // Reload user timers on restart
+  console.log('Server initializing...');
+
+  User
+    .all()
+    .then(users => {
+      console.log('Users with active reminders', users);
+      users.forEach(user => {
+        Timer.cancelReminders(user.slack_user_id);
+        Timer.setNextReminder(user.slack_user_id);
+      });
+    });
+
 }
