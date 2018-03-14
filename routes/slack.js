@@ -1,9 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const TeamController = require('../controllers/team_controller');
-const UserController = require('../controllers/user_controller');
-const AnswerController = require('../controllers/answer_controller');
+const TeamsController = require('../controllers/teams_controller');
+const UsersController = require('../controllers/users_controller');
+const AnswersController = require('../controllers/answers_controller');
 
 const router = express.Router();
 const urlEncodedParser = bodyParser.urlencoded({ extended: false });
@@ -11,17 +11,17 @@ const urlEncodedParser = bodyParser.urlencoded({ extended: false });
 // Handle add to slack request
 // VERB: GET
 // PATH: /slack/teams
-router.get('/teams', TeamController.create);
+router.get('/teams', TeamsController.create);
 
 // Handle slash commands
 // VERB: POST
 // PATH: /slack/users
-router.post('/users', UserController.update);
+router.post('/users', UsersController.update);
 
 // Handles button clicks from interactive messages
 // VERB: POST
 // PATH: /slack/answers
-router.post('/answers', urlEncodedParser, AnswerController.update);
+router.post('/answers', urlEncodedParser, AnswersController.update);
 
 
 module.exports = router;
