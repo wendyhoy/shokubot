@@ -10,18 +10,18 @@ const urlEncodedParser = bodyParser.urlencoded({ extended: false });
 
 // Handle add to slack request
 // VERB: GET
-// PATH: /slack/team
-router.get('/team', TeamController.create);
+// PATH: /slack/teams
+router.get('/teams', TeamController.create);
 
 // Handle slash commands
 // VERB: POST
-// PATH: /slack/user
-router.post('/user', UserController.update);
+// PATH: /slack/users
+router.post('/users', UserController.update);
 
 // Handles button clicks from interactive messages
 // VERB: POST
-// PATH: /slack/answer
-router.post('/answer', urlEncodedParser, AnswerController.update);
+// PATH: /slack/answers
+router.post('/answers', urlEncodedParser, AnswerController.update);
 
 
 module.exports = router;
