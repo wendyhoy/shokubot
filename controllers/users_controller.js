@@ -1,4 +1,5 @@
 const {
+  sendToSlackOauth,
   sendToSlackResponseUrl,
   getSlackUserInfo
 } = require('../helpers/helper_functions');
@@ -10,6 +11,43 @@ const User = require('../models/user');
 const Content = require('../content');
 
 module.exports = {
+
+  async create (req, res) {
+    console.log('Sign in with Slack requested.');
+
+    // Slack verification code is stored in req.query.code
+    // Send request back with verification code, client ID, and client secret
+    // via https://slack.com/api/oauth.access
+    // and wait for JSON response from Slack
+    try {
+      const verificationCode = req.query.code;
+      const redirectUrl = `${process.env.DOMAIN}/slack/users`;
+
+      const response = await sendToSlackOauth(verificationCode, redirectUrl);
+      console.log('Sign in with Slack successful');
+
+      // Slack user signed in successfully
+      // Save access token
+      const { access_token, user } = response;
+      const { id: userId } = user;
+
+      // Assume the team has already added shokubot
+      // Assume the user has used shokubot and is in the database
+      // TODO: Need to support case where team is not added yet
+      // TODO: Need to support adding new users
+
+      // Update the user
+      await User.update(userId, {
+        slack_access_token: access_token,
+      });
+
+      res.send('sign_in_with_slack_success');
+    }
+    catch(error) {
+      console.error(error);
+      res.send('sign_in_with_slack_error');
+    }
+  },
 
   async update (req, res) {
 
@@ -185,7 +223,10 @@ module.exports = {
 
         const { user } = response;
         const { real_name, tz_offset } = user;
-        await User.update(user_id, real_name, tz_offset);
+        await User.update(user_id, {
+          slack_real_name: real_name,
+          slack_tz_offset: tz_offset
+        });
 
         console.log('Slack user added successfully');
       }

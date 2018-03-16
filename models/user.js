@@ -2,14 +2,7 @@ const knex = require('../db');
 
 module.exports = {
 
-  all() {
-    return knex.select('slack_user_id')
-      .from('users')
-      .whereNotNull('reminders')
-      .where('paused', false);
-  },
-
-  create(slackUserId, slackImChannelId, teamId) {
+  create (slackUserId, slackImChannelId, teamId) {
     return knex('users').insert({
       slack_user_id: slackUserId,
       slack_im_channel_id: slackImChannelId,
@@ -17,34 +10,45 @@ module.exports = {
     });
   },
 
-  update(slackUserId, realName, tzOffset) {
+  update (slackUserId, params) {
     return knex('users')
       .where('slack_user_id', slackUserId)
-      .update({
-        slack_real_name: realName,
-        slack_tz_offset: tzOffset
-      });
+      .update(params);
   },
 
-  findBySlackUserId(slackUserId) {
+  all () {
+    return knex.select('slack_user_id')
+      .from('users')
+      .whereNotNull('reminders')
+      .where('paused', false);
+  },
+
+  findById (userId) {
+    return knex.select('slack_real_name', 'slack_team_name')
+      .from('users')
+      .innerJoin('teams', 'users.team_id', 'teams.id')
+      .where('users.id', userId);
+  },
+
+  findBySlackUserId (slackUserId) {
     return knex.select('id')
       .from('users')
       .where('slack_user_id', slackUserId);
   },
 
-  getSlackImChannelId(slackUserId) {
+  getSlackImChannelId (slackUserId) {
     return knex.select('slack_im_channel_id')
       .from('users')
       .where('slack_user_id', slackUserId);
   },
 
-  getSlackTimezoneOffset(slackUserId) {
+  getSlackTimezoneOffset (slackUserId) {
     return knex.select('slack_tz_offset')
       .from('users')
       .where('slack_user_id', slackUserId);
   },
 
-  setReminders(slackUserId, reminders) {
+  setReminders (slackUserId, reminders) {
     return knex('users')
       .where('slack_user_id', slackUserId)
       .update({
@@ -52,13 +56,13 @@ module.exports = {
       });
   },
 
-  getReminders(slackUserId) {
+  getReminders (slackUserId) {
     return knex.select('reminders')
       .from('users')
       .where('slack_user_id', slackUserId);
   },
 
-  setPaused(slackUserId, value) {
+  setPaused (slackUserId, value) {
     return knex('users')
       .where('slack_user_id', slackUserId)
       .update({
@@ -66,11 +70,10 @@ module.exports = {
       });
   },
 
-  isPaused(slackUserId) {
+  isPaused (slackUserId) {
     return knex.select('paused')
       .from('users')
       .where('slack_user_id', slackUserId);
   }
-
 
 }

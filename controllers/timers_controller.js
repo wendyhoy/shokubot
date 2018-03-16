@@ -1,5 +1,4 @@
 const moment = require('moment');
-const requestPromise = require('../helpers/request_promise');
 const { sendToSlackImChannel } = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
@@ -20,7 +19,7 @@ module.exports = {
       // get most recent answer for this user
       const users = await User.findBySlackUserId(slackUserId);
       const userId = users[0].id;
-      const answers = await Answer.findLastAnswerByUserId(userId);
+      const answers = await Answer.findLastByUserId(userId);
       console.log('isDoneToday: answers length', answers, answers.length);
 
       // if no answers, return false

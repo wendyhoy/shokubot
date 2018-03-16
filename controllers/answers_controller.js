@@ -53,7 +53,7 @@ module.exports = {
         case Content.complexity.callback_id:
 
           try {
-            const answers = await Answer.findLastAnswerByUserId(userId);
+            const answers = await Answer.findLastByUserId(userId);
             await Answer.updateComplexity(answers[0].id, answerVal);
             console.log('Complexity answer saved to the database.');
 
@@ -73,7 +73,7 @@ module.exports = {
         case Content.reward.callback_id:
 
           try {
-            const answers = await Answer.findLastAnswerByUserId(userId);
+            const answers = await Answer.findLastByUserId(userId);
             await Answer.updateReward(answers[0].id, answerVal);
             message.text = Content.done;
 

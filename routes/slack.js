@@ -13,6 +13,11 @@ const urlEncodedParser = bodyParser.urlencoded({ extended: false });
 // PATH: /slack/teams
 router.get('/teams', TeamsController.create);
 
+// Handle sign in with slack
+// VERB: GET
+// PATH: /slack/users
+router.get('/users', UsersController.create);
+
 // Handle slash commands
 // VERB: POST
 // PATH: /slack/users

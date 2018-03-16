@@ -1,5 +1,25 @@
 const requestPromise = require('./request_promise');
 
+async function sendToSlackOauth(verificationCode, redirectUrl) {
+  const options = {
+    uri:
+      'https://slack.com/api/oauth.access?code='
+      +verificationCode
+      +'&client_id='+process.env.SLACK_CLIENT_ID
+      +'&client_secret='+process.env.SLACK_CLIENT_SECRET
+      +'&redirect_uri='+redirectUrl,
+    method: 'get'
+  };
+
+  try {
+    const response = await requestPromise(options);
+    return response;
+  }
+  catch(error) {
+    return error;
+  }
+}
+
 async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
   const options = {
     uri: responseUrl,
@@ -85,6 +105,7 @@ async function getSlackUserInfo(slackBotAccessToken, slackUserId) {
 
 
 module.exports = {
+  sendToSlackOauth,
   sendToSlackResponseUrl,
   sendToSlackImChannel,
   getSlackImChannel,
