@@ -36,6 +36,12 @@ module.exports = {
       .where('slack_user_id', slackUserId);
   },
 
+  getSlackAccessToken (slackUserId) {
+    return knex.select('id', 'slack_access_token')
+      .from('users')
+      .where('slack_user_id', slackUserId);
+  },
+
   getSlackImChannelId (slackUserId) {
     return knex.select('slack_im_channel_id')
       .from('users')

@@ -1,3 +1,5 @@
+const jwt = require('jsonwebtoken');
+
 const {
   sendToSlackOauth,
   sendToSlackResponseUrl,
@@ -41,7 +43,13 @@ module.exports = {
         slack_access_token: access_token,
       });
 
-      res.send('sign_in_with_slack_success');
+      // create jwt token with slack user id
+      const token = jwt.sign(
+        { slack_user_id: userId },
+        process.env.SECRET
+      );
+
+      res.redirect(`${process.env.CLIENT}/signing_in?id=${token}`);
     }
     catch(error) {
       console.error(error);

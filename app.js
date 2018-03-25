@@ -8,6 +8,7 @@ const cors = require('cors');
 
 const index = require('./routes/index');
 const slack = require('./routes/slack');
+const tokens = require('./routes/api/v1/tokens');
 const teams = require('./routes/api/v1/teams');
 const users = require('./routes/api/v1/users');
 
@@ -28,6 +29,7 @@ app.use(cors());
 
 app.use('/', index);
 app.use('/slack', slack);
+app.use('/api/v1/tokens', tokens);
 app.use('/api/v1/teams', teams);
 app.use('/api/v1/users', users);
 
