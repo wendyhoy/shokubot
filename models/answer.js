@@ -16,14 +16,16 @@ module.exports = {
       .innerJoin('users', 'answers.user_id', 'users.id')
       .innerJoin('teams', 'users.team_id', 'teams.id')
       .where('teams.id', teamId)
-      .groupBy(knex.raw('date(answers.created_at)'));
+      .groupBy(knex.raw('date(answers.created_at)'))
+      .orderBy('date', 'asc');
   },
 
   findAllByUserId (userId) {
     return knex.select(
       knex.raw('autonomy, complexity, reward, date(created_at) as date'))
       .from('answers')
-      .where('user_id', userId);
+      .where('user_id', userId)
+      .orderBy('date', 'asc');
   },
 
   findLastByUserId (userId) {
