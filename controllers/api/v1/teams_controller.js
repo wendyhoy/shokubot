@@ -60,23 +60,27 @@ module.exports = {
     // get answers
     const answers = await Answer.findAllByTeamId(id);
 
-    let count = 0;
+    let dailyCount = 0;
+    let totalCount = 0;
     let autonomyTotal = 0;
     let complexityTotal = 0;
     let rewardTotal = 0;
 
     const runningAvgs = answers.map(answer => {
 
-      count += parseInt(answer.count);
+      dailyCount = parseInt(answer.count);
+      totalCount += dailyCount;
       autonomyTotal += parseInt(answer.autonomy);
       complexityTotal += parseInt(answer.complexity);
       rewardTotal += parseInt(answer.reward);
 
       return {
-        autonomy: Math.trunc(autonomyTotal / count * 100),
-        complexity: Math.trunc(complexityTotal / count * 100),
-        reward: Math.trunc(rewardTotal / count * 100),
-        date: answer.date
+        autonomy: Math.trunc(autonomyTotal / totalCount * 100),
+        complexity: Math.trunc(complexityTotal / totalCount * 100),
+        reward: Math.trunc(rewardTotal / totalCount * 100),
+        date: answer.date,
+        daily_count: dailyCount,
+        total_count: totalCount
       };
 
     });
