@@ -1,22 +1,60 @@
+const jwt = require('jsonwebtoken');
+const ApiController = require('./api_controller');
 const Team = require('../../../models/team');
+const User = require('../../../models/user');
 const Answer = require('../../../models/answer');
 
 module.exports = {
 
   async index (req, res) {
     const teams = await Team.all();
-    res.json(teams);
+    const jsonResponse = {
+      json: {
+        team_names: teams
+      },
+      status: 200
+    }
+    res.json(jsonResponse);
   },
 
-  async show (req, res, next) {
+  async show (req, res) {
 
-    const { id } = req.params;
+    // authenticate user (user must be signed in)
+    const authError = await ApiController.authenticateUser(req);
+    if (authError !== null) {
+      res.json(authError);    
+      return;
+    }
 
-    // get team info
+    // get requested team info
+    const id = parseInt(req.params.id);
     const teams = await Team.findById(id);
+
     if (teams.length <= 0) {
-       next();
-       return;
+      const notFoundError = {
+        json: {
+          type: "Not Found",         
+        },
+        status: 404
+      }
+      res.json(notFoundError);       
+      return;      
+    }
+
+    // authorize user (user can only request their team's data)  
+    const auth = req.headers.authorization;
+    const payload = jwt.verify(auth, process.env.SECRET);
+    const { team_id } = payload;
+
+    if (team_id !== id) {
+      const notAuthorized = {
+        json: {
+          type: "Unauthorized",         
+        },
+        status: 401
+      }
+      res.json(notAuthorized);     
+      return;
     }
 
     // get answers
@@ -45,8 +83,11 @@ module.exports = {
 
     const team = teams[0];
     const jsonResponse = {
-      team_name: team.slack_team_name,
-      answers: runningAvgs
+      json: {
+        team_name: team.slack_team_name,
+        answers: runningAvgs
+      },
+      status: 200
     };
 
     res.json(jsonResponse);

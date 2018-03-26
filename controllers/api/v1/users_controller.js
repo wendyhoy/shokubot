@@ -1,17 +1,48 @@
+const jwt = require('jsonwebtoken');
+const ApiController = require('./api_controller');
 const User = require('../../../models/user');
 const Answer = require('../../../models/answer');
 
 module.exports = {
 
-  async show (req, res, next) {
+  async show (req, res) {
 
-    const { id } = req.params;
+    // authenticate user (user must be signed in)
+    const authError = await ApiController.authenticateUser(req);
+    if (authError !== null) {
+      res.json(authError);    
+      return;
+    }
 
-    // get user info
+    // get requested user info
+    const id = parseInt(req.params.id);
     const users = await User.findById(id);
+
     if (users.length <= 0) {
-       next();
-       return;
+      const notFoundError = {
+        json: {
+          type: "Not Found",         
+        },
+        status: 404
+      }
+      res.json(notFoundError);       
+      return;
+    }
+
+    // authorize user (user can only request own data)  
+    const auth = req.headers.authorization;
+    const payload = jwt.verify(auth, process.env.SECRET);
+    const { user_id } = payload;
+
+    if (user_id !== id) {
+      const notAuthorized = {
+        json: {
+          type: "Unauthorized",         
+        },
+        status: 401
+      }
+      res.json(notAuthorized);     
+      return;
     }
 
     // get answers
@@ -40,9 +71,12 @@ module.exports = {
 
     const user = users[0];
     const jsonResponse = {
-      user_name: user.slack_real_name,
-      team_name: user.slack_team_name,
-      answers: runningAvgs
+      json: {
+        user_name: user.slack_real_name,
+        team_name: user.slack_team_name,
+        answers: runningAvgs
+      },
+      status: 200
     };
 
     res.json(jsonResponse);

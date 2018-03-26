@@ -24,20 +24,14 @@ module.exports = {
   },
 
   findById (userId) {
-    return knex.select('slack_real_name', 'slack_team_name')
+    return knex.select('slack_real_name', 'slack_team_name', 'slack_access_token', 'team_id')
       .from('users')
       .innerJoin('teams', 'users.team_id', 'teams.id')
       .where('users.id', userId);
   },
 
   findBySlackUserId (slackUserId) {
-    return knex.select('id')
-      .from('users')
-      .where('slack_user_id', slackUserId);
-  },
-
-  getSlackAccessToken (slackUserId) {
-    return knex.select('id', 'slack_access_token')
+    return knex.select('id', 'slack_real_name', 'slack_access_token', 'team_id')
       .from('users')
       .where('slack_user_id', slackUserId);
   },
