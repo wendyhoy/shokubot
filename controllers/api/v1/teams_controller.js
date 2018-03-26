@@ -67,10 +67,10 @@ module.exports = {
 
     const runningAvgs = answers.map(answer => {
 
-      count += answer.count;
-      autonomyTotal += answer.autonomy;
-      complexityTotal += answer.complexity;
-      rewardTotal += answer.reward;
+      count += parseInt(answer.count);
+      autonomyTotal += parseInt(answer.autonomy);
+      complexityTotal += parseInt(answer.complexity);
+      rewardTotal += parseInt(answer.reward);
 
       return {
         autonomy: Math.trunc(autonomyTotal / count * 100),
