@@ -40,7 +40,7 @@ async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
 }
 
 async function sendToSlackImChannel(accessToken, jsonMessage) {
-  console.log(`sendToSlackImChannel: token: ${accessToken}, message: ${jsonMessage}`);
+  console.log(`sendToSlackImChannel: message: ${jsonMessage}`);
   console.log(jsonMessage);
   const options = {
     uri: 'https://slack.com/api/chat.postMessage',
@@ -63,25 +63,35 @@ async function sendToSlackImChannel(accessToken, jsonMessage) {
 }
 
 async function getSlackImChannel(accessToken, slackUserId) {
-  console.log(`getSlackImChannel: accessToken: ${accessToken}, slackUserId: ${slackUserId}`);
-  const options = {
-    uri:
-      'https://slack.com/api/im.list?token='
-      +accessToken,
-    method: 'get'
-  };
+  console.log(`getSlackImChannel: slackUserId: ${slackUserId}`);
 
   try {
-    const response = await requestPromise(options);
-    console.log('getSlackImChannel: received response');
+
     let channelID = null;
-    for (let i=0; i<response.ims.length; i++) {
-      if (response.ims[i].user === slackUserId) {
-        channelID = response.ims[i].id;
-        console.log('getSlackImChannel: found channel: ', channelID);
-        break;
+    let nextCursor = ""; 
+
+    do { 
+
+      const options = {
+        uri:
+          `https://slack.com/api/im.list?limit=100&token=${accessToken}`
+          +(nextCursor !== "" ? `&cursor=${nextCursor}` : ""),
+        method: 'get'
+      };      
+
+      const response = await requestPromise(options);
+      nextCursor = response.response_metadata.next_cursor;
+      console.log(`getSlackImChannel: received response, next cursor: ${nextCursor}`);
+
+      for (let i=0; i<response.ims.length; i++) {
+        if (response.ims[i].user === slackUserId) {
+          channelID = response.ims[i].id;
+          console.log('getSlackImChannel: found channel: ', channelID);
+          break;
+        }
       }
-    }
+      
+    } while (channelID === null && nextCursor !== "");
 
     return channelID;
   }

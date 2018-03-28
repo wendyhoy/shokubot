@@ -46,7 +46,7 @@ module.exports = {
 
       await sendToSlackImChannel(bot_access_token, message);
 
-      res.send('add_to_slack_success');
+      res.redirect(`${process.env.CLIENT}`);
     }
     catch(error) {
       console.error(error);
