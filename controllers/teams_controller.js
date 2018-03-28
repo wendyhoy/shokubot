@@ -1,7 +1,8 @@
 const {
   sendToSlackOauth,
   sendToSlackImChannel,
-  getSlackImChannel
+  getSlackImChannel,
+  openSlackImChannel
 } = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
@@ -36,7 +37,16 @@ module.exports = {
       console.log('Slack team added successfully.');
 
       // Get this user's DM channel ID
-      const channelId = await getSlackImChannel(bot_access_token, user_id);
+      let channelId = await getSlackImChannel(bot_access_token, user_id);
+
+      // PATCH:
+      // If no channelId, open IM channel Id
+      if (!channelId) {
+        const response = await openSlackImChannel(bot_access_token, user_id);
+        console.log('openSlackImChannel response');
+        console.log(response);
+        channelId = response.channel.id;
+      }
 
       // DM the user with onboarding information
       const message = {

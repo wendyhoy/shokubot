@@ -1,5 +1,5 @@
 const moment = require('moment');
-const { sendToSlackImChannel } = require('../helpers/helper_functions');
+const { sendToSlackImChannel, openSlackImChannel } = require('../helpers/helper_functions');
 
 const Team = require('../models/team');
 const User = require('../models/user');
@@ -114,10 +114,19 @@ module.exports = {
 
         // get user's IM channel
         const channelIds = await User.getSlackImChannelId(slackUserId);
+        let channelId = channelIds[0].slack_im_channel_id;
+
+        // PATCH: open IM channel if channelId doesn't exist in table
+        if (!channelId) {
+          const response = await openSlackImChannel(slackBotAccessToken, slackUserId);
+          console.log('sendReminder: openSlackImChannel response');
+          console.log(response);
+          channelId = response.channel.id;
+        }
 
         // post first question to user's IM channel
         const message = {
-          channel: channelIds[0].slack_im_channel_id,
+          channel: channelId,
           attachments: [
             {
               ...Content.autonomy

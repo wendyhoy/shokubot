@@ -120,11 +120,36 @@ async function getSlackUserInfo(slackBotAccessToken, slackUserId) {
   }
 }
 
+async function openSlackImChannel(accessToken, slackUserId) {
+
+  const options = {
+    uri: 'https://slack.com/api/im.open',
+    method: 'post',
+    headers: {
+      'Content-type': 'application/json',
+      'Authorization': 'Bearer '+accessToken
+    },
+    json: {
+      'user': slackUserId
+    }
+  };
+
+  try {
+    const response = await requestPromise(options);
+    console.log(`openSlackImChannel: response - ${response}`);
+    return response;
+  }
+  catch(error) {
+    console.error(`openSlackImChannel: error - ${error}`);
+    return error;
+  }
+}
 
 module.exports = {
   sendToSlackOauth,
   sendToSlackResponseUrl,
   sendToSlackImChannel,
   getSlackImChannel,
-  getSlackUserInfo
+  getSlackUserInfo,
+  openSlackImChannel
 }
