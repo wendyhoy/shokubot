@@ -236,7 +236,7 @@ module.exports = {
           slack_tz_offset: tz_offset
         });
 
-        console.log('Slack user added successfully');
+        console.log(`Slack user added successfully: user_id: ${user_id}, channel_id: ${channel_id}, team_id: ${team_id}`);
       }
       catch(error) {
         console.error(error);
