@@ -3,7 +3,8 @@ const jwt = require('jsonwebtoken');
 const {
   sendToSlackOauth,
   sendToSlackResponseUrl,
-  getSlackUserInfo
+  getSlackUserInfo,
+  getSlackImChannel
 } = require('../helpers/helper_functions');
 
 const Timer = require('./timers_controller');
