@@ -40,6 +40,7 @@ async function sendToSlackResponseUrl(responseUrl, jsonMessage) {
 }
 
 async function sendToSlackImChannel(accessToken, jsonMessage) {
+  console.log(`sendToSlackImChannel: token: ${accessToken}, message: ${jsonMessage}`);
   const options = {
     uri: 'https://slack.com/api/chat.postMessage',
     method: 'post',
