@@ -63,6 +63,7 @@ async function sendToSlackImChannel(accessToken, jsonMessage) {
 }
 
 async function getSlackImChannel(accessToken, slackUserId) {
+  console.log(`getSlackImChannel: accessToken: ${accessToken}, slackUserId: ${slackUserId}`);
   const options = {
     uri:
       'https://slack.com/api/im.list?token='
@@ -72,11 +73,12 @@ async function getSlackImChannel(accessToken, slackUserId) {
 
   try {
     const response = await requestPromise(options);
-
+    console.log('getSlackImChannel: received response');
     let channelID = null;
     for (let i=0; i<response.ims.length; i++) {
       if (response.ims[i].user === slackUserId) {
         channelID = response.ims[i].id;
+        console.log('getSlackImChannel: found channel: ', channelID);
         break;
       }
     }
