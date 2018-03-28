@@ -82,6 +82,8 @@ async function getSlackImChannel(accessToken, slackUserId) {
       const response = await requestPromise(options);
       nextCursor = response.response_metadata.next_cursor;
       console.log(`getSlackImChannel: received response, next cursor: ${nextCursor}`);
+      console.log(options);
+      console.log(response);
 
       for (let i=0; i<response.ims.length; i++) {
         if (response.ims[i].user === slackUserId) {
