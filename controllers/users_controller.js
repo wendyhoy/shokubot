@@ -219,24 +219,29 @@ module.exports = {
     else {
 
       // Get slack request
-      const { team_id, user_id, channel_id, response_url } = reqBody;
+      const { team_id, user_id, response_url } = reqBody;
 
       try {
         // find the slack team in the database and add new user, or find existing user
         const teams = await Team.findBySlackTeamId(team_id);
-        await User.create(user_id, channel_id, teams[0].id);
+        const team = teams[0];
+        await User.create(user_id, team.id);
 
         // save the user's real name and timezone offset
-        const response = await getSlackUserInfo(teams[0].slack_bot_access_token, user_id);
+        const userInfo = await getSlackUserInfo(team.slack_bot_access_token, user_id);
 
-        const { user } = response;
+        // save the user's im channel
+        const channelId = await getSlackImChannel(team.slack_bot_access_token, user_id); 
+
+        const { user } = userInfo;
         const { real_name, tz_offset } = user;
         await User.update(user_id, {
           slack_real_name: real_name,
-          slack_tz_offset: tz_offset
+          slack_tz_offset: tz_offset,
+          slack_im_channel_id: channelId
         });
 
-        console.log(`Slack user added successfully: user_id: ${user_id}, channel_id: ${channel_id}, team_id: ${team_id}`);
+        console.log(`Slack user added successfully: user_id: ${user_id}, channelId: ${channelId}, team_id: ${team_id}`);
       }
       catch(error) {
         console.error(error);

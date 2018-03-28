@@ -2,10 +2,9 @@ const knex = require('../db');
 
 module.exports = {
 
-  create (slackUserId, slackImChannelId, teamId) {
+  create (slackUserId, teamId) {
     return knex('users').insert({
       slack_user_id: slackUserId,
-      slack_im_channel_id: slackImChannelId,
       team_id: teamId
     });
   },
