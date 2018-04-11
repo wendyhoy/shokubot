@@ -10,7 +10,7 @@ const debug = require('debug')('shokubot:server');
 const http = require('http');
 
 const User = require('../models/user');
-const Timer = require('../controllers/timers_controller');
+const Timer = require('../controllers/api/v1/timers_controller');
 
 /**
  * Get port from environment and store in Express.

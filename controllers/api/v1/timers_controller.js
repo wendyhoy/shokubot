@@ -1,10 +1,13 @@
-const moment = require('moment');
-const { sendToSlackImChannel, openSlackImChannel } = require('../helpers/helper_functions');
+const { 
+  sendToSlackImChannel, 
+  openSlackImChannel 
+} = require('../../../helpers/helper_functions');
 
-const Team = require('../models/team');
-const User = require('../models/user');
-const Answer = require('../models/answer');
-const Content = require('../content');
+const moment = require('moment');
+const Team = require('../../../models/team');
+const User = require('../../../models/user');
+const Answer = require('../../../models/answer');
+const Content = require('../../../content');
 
 const timers = {};
 
