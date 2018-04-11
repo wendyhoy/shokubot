@@ -1,13 +1,13 @@
-const { sendToSlackResponseUrl } = require('../helpers/helper_functions');
+const { sendToSlackResponseUrl } = require('../../../helpers/helper_functions');
 
 const Timer = require('./timers_controller');
-const Answer = require('../models/answer');
-const User = require('../models/user');
-const Content = require('../content');
+const Answer = require('../../../models/answer');
+const User = require('../../../models/user');
+const Content = require('../../../content');
 
 module.exports = {
 
-  async update (req, res) {
+  async create (req, res) {
     // respond with ok status
     res.status(200).end();
 
